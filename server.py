@@ -1,12 +1,26 @@
 from flask import Flask, request
 import requests
+from service.S3ImgGetter import getImg
+from service.ImgProcessor import processImg
 
 app = Flask(__name__)
+
 
 @app.route("/")
 def home():
     return "<h1>Home</h1>"
 
+
+@app.route("/ip-service/process", methods=['post'])
+def process():
+    content_type = request.headers.get('Content-Type')
+    if content_type == 'application/json':
+        img_ref = request.json
+        img = getImg(img_ref)
+        processed_img = processImg(img)
+        # Todo: send processed image to classification service
+    else:
+        return 'Content-Type not supported!'
 
 
 # flask examples
@@ -30,8 +44,6 @@ def home():
 #         return json
 #     else:
 #         return 'Content-Type not supported!'
-
-
 
 
 # if __name__ == '__main__':
