@@ -15,10 +15,12 @@ def home():
 def process():
     content_type = request.headers.get('Content-Type')
     if content_type == 'application/json':
-        img_ref = request.json
+        img_ref = 'example_input_image.tif'
         img = getImg(img_ref)
         processed_img = processImg(img)
         # Todo: send processed image to classification service
+
+        return 'Process complete!'
     else:
         return 'Content-Type not supported!'
 
