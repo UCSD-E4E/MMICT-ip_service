@@ -2,9 +2,9 @@ import os.path
 
 import boto3
 
-access_key = 'AKIAWFXD2W3W5JSAJIMW'
-secret_key = '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'
-bucket_name = 'mangrove-monitoring-images'
+access_key = ''
+secret_key = ''
+bucket_name = ''
 image_folder = './'
 
 
