@@ -1,3 +1,12 @@
 Flask==2.2.2
 requests==2.28.2
+# For s3
 boto3==1.26.83
+
+# For processing
+numpy==1.23.5
+rasterio==1.3.6
+rioxarray==0.13.4
+xarray==2023.2.0
+distancerasters==0.3.2
+opencv-python==4.7.0.72
