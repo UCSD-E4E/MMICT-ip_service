@@ -1,3 +1,6 @@
+"""
+
+"""
 from flask import Flask, request
 import requests
 from util.S3ImgGetter import getImg
@@ -11,8 +14,8 @@ def home():
     return "<h1>Processing Server</h1>"
 
 
-
-@app.route("/ip-service/process", methods=['post'])
+# creates worker thread to handle request and responds 202 Accepted
+@app.route("/process", methods=['POST', 'GET'])
 def process():
     content_type = request.headers.get('Content-Type')
     if content_type == 'application/json':
@@ -20,34 +23,15 @@ def process():
         img = getImg(img_ref)
         # processed_img = processImg(img)
         # Todo: send processed image to classification service
-
-        return 'Process complete!'
+        return 202, 'Accepted', {}
     else:
-        return 'Content-Type not supported!'
+        return 500, 'Internal Error', {}
 
 
-# flask examples
-# #/api/blue?name=name
-# @app.route("/api/blue", methods=['GET'])
-# def blue():
-#     if request.method != 'GET':
-#         return "<script>alert('invalid method')</script>"
-#     elif 'name' in request.args:
-#         return f"<h1 style='color:blue'>BlueServer says hello {request.args['name']}!</h1>"
-#     else:
-#         return "<script>alert('invalid query string')</script>"
+# get status of d
+@app.route("/status", methods=['GET'])
+def status():
+    img_id = request.args.get('id')
+    print(img_id)
+    return 200, 'OK', {}
 
-# #/api/blue?name=name
-# @app.route("/api/jsonBlue", methods=['POST'])
-# def jsonBlue():
-#     content_type = request.headers.get('Content-Type')
-#     if (content_type == 'application/json'):
-#         json = request.json
-#         json['visitedBlue'] = 'true'
-#         return json
-#     else:
-#         return 'Content-Type not supported!'
-
-
-# if __name__ == '__main__':
-#     app.run(debug=True, port=5001)
