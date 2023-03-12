@@ -2,12 +2,14 @@ from flask import Flask, request
 import requests
 from service.S3ImgGetter import getImg
 
+
 app = Flask(__name__)
 
 
 @app.route("/")
 def home():
     return "<h1>Processing Server</h1>"
+
 
 
 @app.route("/ip-service/process", methods=['post'])
