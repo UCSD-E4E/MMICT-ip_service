@@ -8,7 +8,7 @@ app = Flask(__name__)
 
 @app.route("/")
 def home():
-    return "<h1>Home</h1>"
+    return "<h1>Processing Server</h1>"
 
 
 @app.route("/ip-service/process", methods=['post'])
