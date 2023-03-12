@@ -1,6 +1,6 @@
 from rasterio.plot import reshape_as_image
 import rioxarray
-import service.features
+from util import features
 
 def processImgFromLocal(img):
     dataset = imageToDataset(img)

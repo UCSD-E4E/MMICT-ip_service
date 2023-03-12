@@ -1,6 +1,6 @@
 from flask import Flask, request
 import requests
-from service.S3ImgGetter import getImg
+from util.S3ImgGetter import getImg
 
 
 app = Flask(__name__)
