@@ -1,7 +1,7 @@
 """
 
 """
-from flask import Flask, request
+from flask import Flask, request, make_response
 import requests
 from util.S3ImgGetter import getImg
 
@@ -23,15 +23,27 @@ def process():
         img = getImg(img_ref)
         # processed_img = processImg(img)
         # Todo: send processed image to classification service
-        return 202, 'Accepted', {}
+        response = make_response()
+        response.status_code = 202
+        response.status = "Accepted"
+        return response
     else:
-        return 500, 'Internal Error', {}
+        response = make_response()
+        response.status_code = 500
+        return response
 
 
 # get status of d
 @app.route("/status", methods=['GET'])
 def status():
     img_id = request.args.get('id')
-    print(img_id)
-    return 200, 'OK', {}
+
+
+
+    response = make_response(f'<h1>echo {img_id}</h1>')
+    response.status_code = 
+    print(Hello world) 
+    response.status = "Bad Request"
+
+    return response
 
