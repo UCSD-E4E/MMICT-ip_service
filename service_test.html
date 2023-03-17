@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<head>
+    <title>processing service test</title>
+</head>
+<body>
+
+    <div>
+    <form id="processing-form">
+        <label for="img_ref">Image ref (use 'SPECIAL_TEST_CODE' for testing):</label>
+    <input type="text" name="img_ref" id="img_ref"\>
+    </form>
+    <button id="testBtn">Submit test</button>
+    </div>
+    <form id="status-form">
+        <label for="status-id">id: </label>
+        <input type="text" name="status-id" id="status-id"\>
+        <button type="button" id="statusBtn">get status</button>
+    </form>
+    <ul id="status-id-list">
+
+    </ul>
+    <output id="status"></output>
+    <script>
+        testBtn = document.getElementById('testBtn')
+        statusBtn = document.getElementById('statusBtn')
+        testBtn.addEventListener('click', () => sendRequest())
+        statusBtn.addEventListener('click', () => getStatus())
+
+        function addStatus(id){
+            const listEl = document.createElement("li");
+            const textnode = document.createTextNode(id);
+            listEl.appendChild(textnode);
+            document.getElementById("status-id-list").appendChild(listEl);
+        }
+
+        async function getStatus(){
+            status_id = document.getElementById('status-id').value
+            let response = await fetch("http://127.0.0.1:5000/status/"+ status_id, {
+                method: "GET",
+            });
+            response_status = await response.status
+            val = await response.text()
+            if(response_status != 500){
+                document.getElementById("status").innerText = status_id + ": " + val;
+            }
+        }
+
+        async function sendRequest(){
+            img_ref = document.getElementById('img_ref').value
+            post_data = JSON.stringify({ 'img_ref': img_ref})
+            
+            let response = await fetch("http://127.0.0.1:5000/process", {
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                method: "POST",
+                body: post_data,
+            });
+            val = await response.text()
+            addStatus(val)
+
+        }
+    </script>
+</body>

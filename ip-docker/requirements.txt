@@ -11,3 +11,5 @@ xarray==2023.2.0
 distancerasters==0.3.2
 opencv-contrib-python==4.7.0.72
 dask==2023.2.1
+simplejson==3.18.3
+Flask-Cors==3.0.10

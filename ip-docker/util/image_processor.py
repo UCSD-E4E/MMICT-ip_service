@@ -2,6 +2,14 @@ from rasterio.plot import reshape_as_image
 import rioxarray
 from util import features
 
+
+# returns a processed npArray
+def processImgFromS3(img_ref):
+    # TODO fill in method
+    raise NotImplementedError
+
+
+# returns a processed npArray
 def processImgFromLocal(img):
     dataset = imageToDataset(img)
     addFeatures(dataset=dataset)
