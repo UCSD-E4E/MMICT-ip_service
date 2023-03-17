@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<head>
+    <title>processing service test</title>
+</head>
+<body>
+
+    <div>
+    <form id="processing-form">
+        <label for="img_ref">Image ref:</label>
+    <input type="text" name="img_ref" id="img_ref"\>
+    <button type="button" id="proccessBtn">Submit test</button>
+    </form>
+    <button onclick="runLoop()">Run</button>
+    </div>
+    <!-- <form id="status-form">
+        <label for="status-id">id: </label>
+        <input type="text" name="status-id" id="status-id"\>
+        <button type="button" id="statusBtn">get status</button>
+    </form> -->
+    <ul id="status-id-list">
+
+    </ul>
+    <ul id="status-val-list">
+
+    </ul>
+    <output id="status"></output>
+    <script>
+        proccessBtn = document.getElementById('proccessBtn')
+        // statusBtn = document.getElementById('statusBtn')
+        proccessBtn.addEventListener('click', () => sendRequest())
+        // statusBtn.addEventListener('click', () => getStatus())
+        const idStatusMap = new Map();
+
+
+        function startUpdateUI(){
+            window.setInterval(() => updateStatusList(),1000)
+        }
+
+        function runLoop(){
+            startUpdateUI();
+        }
+        
+        // 
+        function updateIdStatusMap(){
+            for (const id of idStatusMap.keys()) {
+                getStatus(id);
+            }
+        }
+
+        // updates the UI of status-id-list using values in idStatusMap
+        function updateStatusList(){
+            updateIdStatusMap();
+            document.getElementById("status-val-list").innerHTML = ""
+            for (const [id, status] of idStatusMap) {
+                let li = document.createElement('li');
+                li.innerText = `${id}, status:${status}`
+                document.getElementById("status-val-list").appendChild(li);
+            }
+        }
+
+        async function getStatus(id){
+            let response = await fetch("http://127.0.0.1:5000/status/"+ id, {
+                method: "GET",
+            });
+            response_status = await response.status
+            val = await response.text()
+            idStatusMap.set(id, val)
+            return val
+        }
+
+        async function sendRequest(){
+            img_ref = document.getElementById('img_ref').value
+            post_data = JSON.stringify({ 'img_ref': img_ref})
+            
+            let response = await fetch("http://127.0.0.1:5000/process", {
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                method: "POST",
+                body: post_data,
+            });
+            id = await response.text()
+            addStatus(id)
+        }
+
+        function addStatus(id){
+            let sil = document.getElementById('status-id-list');
+            let li = document.createElement('li');
+            li.innerText = id;
+            sil.appendChild(li);
+            idStatusMap.set(id, "NA")
+        }
+    </script>
+</body>

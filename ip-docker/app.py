@@ -56,6 +56,15 @@ def status(id):
         status_val = request_status[id]
     return (status_val,200)
 
+
+# for debugging
+@app.route("/dumpdict", methods=['GET'])
+def dumpDict():
+    status_val = None
+    with status_lock:
+        return (request_status,200)
+
+
 # get status of result from dict
 @app.route("/result/<id>", methods=['GET'])
 def result(id):
