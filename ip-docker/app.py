@@ -38,9 +38,9 @@ def process():
 
         # parses image ref and starts processing
         img_ref = json['img_ref']
-        id = runImgProcessThread(img_ref)
         with status_lock:
             request_status[id] = "CREATED"
+        id = runImgProcessThread(img_ref)
         return (id, 202)
     else:
         return ("Internal Server Error",500)
@@ -105,7 +105,8 @@ def imgProcessThread(id, img_ref):
     # make the geojson available
     result_geojson[id] = geojson
     with status_lock:
-        request_status[id] = "READY"    
+        request_status[id] = "READY"
+
     return
 
 
