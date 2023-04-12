@@ -1,0 +1,17 @@
+<html>
+    <head>
+        <title>Websocket tester</title>
+    </head>
+    <body>
+        <h1>Testing websockets...</h1>
+        <script>
+            const exampleSocket = new WebSocket("ws://127.0.0.1:5000/ws/echo")
+            function sendToSocket(data){
+                exampleSocket.send(data);
+            }
+            exampleSocket.onmessage = (event) => {
+                console.log(event.data);
+            };
+        </script>
+    </body>
+</html>

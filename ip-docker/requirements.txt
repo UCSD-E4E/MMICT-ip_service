@@ -13,3 +13,7 @@ opencv-contrib-python==4.7.0.72
 dask==2023.2.1
 simplejson==3.18.3
 Flask-Cors==3.0.10
+flask-sock==0.6.0 
+h11==0.14.0 
+simple-websocket==0.10.0 
+wsproto==1.2.0
