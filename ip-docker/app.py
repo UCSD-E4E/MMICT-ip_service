@@ -30,37 +30,36 @@ result_geojson = {}
 def home():
     return "<h1>Processing Server</h1>"
 
-@sock.route('/ws/echo')
-def echo(ws):
-    while True:
-        data = ws.receive()
-        data_type = str(type(data))
-        return_val = str(data) + data_type
-        ws.send(return_val)
-
 @sock.route('/ws-process')
 def ws_process(ws):
         data = ws.receive()
-        status = {"status":"ACCEPTED"}
+        progress = {"status":"ACCEPTED"}
         # validate request
         if not validate_process_request_json(data):
             ws.send('invalid request, killing connection')
             return
-        ws.send(status)
+        ws.send(progress)
+
         # pre-process 
-        status["status"] = "PROCESSING"
-        ws.send(status)
+        progress["status"] = "PROCESSING"
+        ws.send(progress)
+        processed_array = processImgFromLocal('tests/res/example_input_image.tif') # TODO THIS DOESNT DOWNLOAD FROM S3
+
         # classify
-        status["status"] = "CLASSIFYING"
-        ws.send(status)
+        progress["status"] = "CLASSIFYING"
+        ws.send(progress)
+        classified_array = spoof_classify(processed_array) # TODO THIS IS ALSO FAKE
+
         # post-process
-        status["status"] = "FINISHING"
-        ws.send(status)
+        progress["status"] = "BUILDING"
+        ws.send(progress)
+        geojson = spoof_build_geojson(classified_array)
+        
+        progress["status"] = "DONE"
+        progress["geojson"] = geojson
+        ws.send(progress)
 
-        status["status"] = "DONE"
-        ws.send(status)
-
-
+# validate that the incoming json has all the required fields
 def validate_process_request_json(data):
     app.logger.warning("validating request: " + data)
     try:
@@ -79,109 +78,22 @@ def validate_process_request_json(data):
         app.logger.error(e)
         return False
     
-
-# creates worker thread to handle request and responds 202 Accepted
-@app.route("/process", methods=['POST'])
-def process():
-    content_type = request.headers.get('Content-Type')
-    if content_type == 'application/json':
-        json = request.json
-        if('img_ref' not in json):
-            return ("img_ref REQUIRED in body", 400)
-
-        # parses image ref and starts processing
-        img_ref = json['img_ref']
-        with status_lock:
-            request_status[id] = "CREATED"
-        id = runImgProcessThread(img_ref)
-        return (id, 202)
-    else:
-        return ("Internal Server Error",500)
-
-
-# get status of id from dict
-@app.route("/status/<id>", methods=['GET'])
-def status(id):
-    status_val = None
-    with status_lock:
-        if(id not in request_status):
-            return ("invalid id",400)
-        status_val = request_status[id]
-    return (status_val,200)
-
-
-# for debugging
-@app.route("/dumpdict", methods=['GET'])
-def dumpDict():
-    status_val = None
-    with status_lock:
-        return (request_status,200)
-
-
-# get status of result from dict
-@app.route("/result/<id>", methods=['GET'])
-def result(id):
-    if(id not in result_geojson):
-        return ("invalid id",400)
-    geojson = result_geojson[id]
-    return (geojson,200)
-
-
-
-# create and run thread to processess image, return ID of thread
-def runImgProcessThread(img_ref):
-    id = getUID()
-    t = Thread(target=imgProcessThread, args=(id, img_ref))
-    t.start()
-    return id
-
-# process the image, updates the request_status as it goes
-def imgProcessThread(id, img_ref):
-    # set intial status
-    with status_lock:
-        request_status[id] = "PROCESSING"
-    # Getting around S3 for development and testing
-    if(img_ref == 'SPECIAL_TEST_CODE'):
-        processed_array = processImgFromLocal('tests/res/example_input_image.tif')
-    else:
-        processed_array = processImgFromS3(img_ref)
-
-    # "call classification"
-    with status_lock:
-        request_status[id] = "CLASSIFYING"
-    classified_output = classify(processed_array)
-    # build geojson
-    with status_lock:
-        request_status[id] = "FINISHING"
-    geojson = build_geojson(classified_output)
-
-    # make the geojson available
-    result_geojson[id] = geojson
-    with status_lock:
-        request_status[id] = "READY"
-
-    return
-
-
+# build a geojson object from the classified output
 def build_geojson(classified_output):
-    if(SPOOF_CLASSIFY):
-        with open('tests/res/labels.geojson') as fd:
-            geojson = json.load(fd)
-        return geojson
     raise NotImplementedError
 
-# call classification service
-def classify(array):
-    if(SPOOF_CLASSIFY):
-        # fake classify to test without classification service
-        with open('tests/res/classification_test_result.dump', 'rb') as fd:
-            output = pickle.load(fd)
-            return output
-        
+# call the classification service
+def classify(processed_array):
     raise NotImplementedError
 
+# spoof building the geojson
+def spoof_build_geojson(classified_output):
+    with open('tests/res/labels.geojson') as fd:
+        geojson = json.load(fd)
+    return geojson
 
-
-# Generates UID of length ID_LENGTH out of ascii chars
-def getUID():
-    return ''.join(random.choice(string.ascii_uppercase + string.ascii_lowercase) for _ in range(ID_LENGTH))
+# pretend to call classification with sample data
+def spoof_classify(array):
+    with open('tests/res/classification_test_result.dump', 'rb') as fd:
+        output = pickle.load(fd)
+        return output
