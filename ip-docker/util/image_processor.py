@@ -34,3 +34,12 @@ def formatData(dataset):
     # This array can then be sent over, in chunks to the classification service
     array = img.reshape(img.shape[0] * img.shape[1], img.shape[2])
     return array
+
+# TODO fix this lol
+def buildGeoJson(output_img):
+    transform = rasterio.transform.from_bounds(*bbox, width= output_img.shape[2], height= output_img.shape[1])
+    labels = processing.raster_to_gdf(output_img, transform, crs = "EPSG:32617")
+
+    # Saving GeoJSON
+    labels.to_file('labels.geojson', driver='GeoJSON')  
+    raise NotImplementedError

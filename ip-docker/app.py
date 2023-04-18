@@ -14,8 +14,9 @@ from flask_sock import Sock
 
 from util.image_processor import processImgFromLocal
 from util.image_processor import processImgFromS3
-SPOOF_CLASSIFY = True # if this flag is set pretend to classify locally, will not make any external http calls
-ID_LENGTH = 8
+
+import asyncio
+from websockets.sync.client import connect
 
 app = Flask(__name__)
 CORS(app) # allow cross origin requests 
@@ -28,38 +29,45 @@ result_geojson = {}
 
 @app.route("/")
 def home():
+    # classify([1,2,3]) # Used to test classification websocket
     return "<h1>Processing Server</h1>"
 
+# route for accepting an incoming websocket request
 @sock.route('/ws-process')
 def ws_process(ws):
+        # recieve the websocket data
         data = ws.receive()
         progress = {"status":"ACCEPTED"}
-        # validate request
+
+        # validate request matches expected json format
         if not validate_process_request_json(data):
             ws.send('invalid request, killing connection')
             return
         ws.send(progress)
 
-        # pre-process 
+        # pre-process data to prepare for classification
         progress["status"] = "PROCESSING"
         ws.send(progress)
         processed_array = processImgFromLocal('tests/res/example_input_image.tif') # TODO THIS DOESNT DOWNLOAD FROM S3
 
-        # classify
+        # classify and write back current status on websocket
         progress["status"] = "CLASSIFYING"
         ws.send(progress)
-        classified_array = spoof_classify(processed_array) # TODO THIS IS ALSO FAKE
-
-        # post-process
+        classified_array = classify(processed_array) 
+        
+        # build geojson from classified data
         progress["status"] = "BUILDING"
         ws.send(progress)
-        geojson = spoof_build_geojson(classified_array)
-        
+        geojson = spoof_build_geojson(classified_array) # TODO GEOJSON BUILDER IS NOT WORKING, THIS IS SPOOFING THE BUILDING PROCESS
+    
+        # notify and return geojson, then close the connection
         progress["status"] = "DONE"
         progress["geojson"] = geojson
         ws.send(progress)
+        ws.close()
 
-# validate that the incoming json has all the required fields
+# validate that the json has all the required fields
+# Note: This only checks that the required fields exists and ignores any additinoal fields
 def validate_process_request_json(data):
     app.logger.warning("validating request: " + data)
     try:
@@ -80,14 +88,25 @@ def validate_process_request_json(data):
     
 # build a geojson object from the classified output
 def build_geojson(classified_output):
+    # TODO fix the 
     raise NotImplementedError
 
-# call the classification service
-def classify(processed_array):
-    raise NotImplementedError
+# takes a processed_array and classifies it using a websocket connection to the classificaiton service
+async def classify(processed_array):
+    try:
+        ws = await connect("ws://127.0.0.1:5001/ws-classify")
+        req = {"classifier_id":13, "image_data":processed_array}
+        ws.send(json.dumps(req))
+        message = ws.recv()
+        app.logger.warning("recieved from ws: " + message)
+        return message
+    except Exception as e:
+        app.logger.error(e)
+        return []
 
-# spoof building the geojson
+# spoof building the geojson since it broke
 def spoof_build_geojson(classified_output):
+    app.logger.warning("Using spoofed geojson")
     with open('tests/res/labels.geojson') as fd:
         geojson = json.load(fd)
     return geojson
