@@ -16,7 +16,7 @@ from util.image_processor import processImgFromLocal
 from util.image_processor import processImgFromS3
 
 import asyncio
-from websockets.sync.client import connect
+import websockets
 
 app = Flask(__name__)
 CORS(app) # allow cross origin requests 
@@ -29,7 +29,8 @@ result_geojson = {}
 
 @app.route("/")
 def home():
-    # classify([1,2,3]) # Used to test classification websocket
+    asyncio.run(classify([1,2,3]))
+    # nosync_classify([])
     return "<h1>Processing Server</h1>"
 
 # route for accepting an incoming websocket request
@@ -93,16 +94,31 @@ def build_geojson(classified_output):
 
 # takes a processed_array and classifies it using a websocket connection to the classificaiton service
 async def classify(processed_array):
-    try:
-        ws = await connect("ws://127.0.0.1:5001/ws-classify")
-        req = {"classifier_id":13, "image_data":processed_array}
-        ws.send(json.dumps(req))
-        message = ws.recv()
-        app.logger.warning("recieved from ws: " + message)
-        return message
+    try:    
+        async with websockets.connect("ws://192.168.1.195:5001/ws-classify") as websocket:
+            req = {"classifier_id":13, "image_data":processed_array}
+            await websocket.send(json.dumps(req))
+            while(True): 
+                message = await websocket.recv()
+                app.logger.warning("recieved from ws: " + message)
+                if message == "DONE":
+                    break
     except Exception as e:
         app.logger.error(e)
         return []
+
+# def nosync_classify(processed_array):  
+#     try:
+#         # ws = websockets.connect("ws://127.0.0.1:5001/ws-classify")
+#         # req = {"classifier_id":13, "image_data":processed_array}
+#         # ws.send("ASYNC IS FOR FOOLS!!!")
+#         # message = ws.recv()
+#         # app.logger.warning("recieved from ws: " + message)
+#         # return message
+#         pass
+#     except Exception as e:
+#         app.logger.error(e)
+#         return []
 
 # spoof building the geojson since it broke
 def spoof_build_geojson(classified_output):
