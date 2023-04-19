@@ -64,7 +64,7 @@ def ws_process(ws):
         asyncio.set_event_loop(asyncio.new_event_loop())
         classified_array = asyncio.get_event_loop().run_until_complete(classify(classifier_id, processed_array)) # TODO MAKE await WORK INSTEAD OF THIS
         
-        ws.send(classified_array) # TODO FOR TESTING ONLY
+        # ws.send(classified_array) # TODO FOR TESTING ONLY
 
         # build geojson from classified data
         progress["status"] = "BUILDING"
