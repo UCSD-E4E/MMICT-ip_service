@@ -14,7 +14,7 @@ from flask_sock import Sock
 
 from util.image_processor import processImgFromLocal
 from util.image_processor import processImgFromS3
-
+import util.image_processor as image_processor
 import asyncio
 import websockets
 import logging
@@ -70,7 +70,8 @@ def ws_process(ws):
         progress["status"] = "BUILDING"
         ws.send(progress)
         geojson = spoof_build_geojson(classified_array) # TODO GEOJSON BUILDER IS NOT WORKING, THIS IS SPOOFING THE BUILDING PROCESS
-    
+        # build_geojson(classified_array)
+        
         # notify and return geojson, then close the connection
         progress["status"] = "DONE"
         progress["geojson"] = geojson
@@ -99,8 +100,8 @@ def validate_process_request_json(data):
     
 # build a geojson object from the classified output
 def build_geojson(classified_output):
-    # TODO fix the 
-    raise NotImplementedError
+    image_processor.buildGeoJson(classified_output)
+    return []
 
 # takes a processed_array and classifies it using a websocket connection to the classificaiton service
 async def classify(classifier_id, processed_array):
