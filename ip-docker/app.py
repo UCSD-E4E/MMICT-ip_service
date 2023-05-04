@@ -19,6 +19,8 @@ import asyncio
 import websockets
 import logging
 
+CLASSIFY_IP_PATH = "ws://100.64.3.32:5001/ws-classify"
+
 logging.basicConfig(level=logging.DEBUG)
 
 app = Flask(__name__)
@@ -50,16 +52,19 @@ def ws_process(ws):
         classifier_id = request_json['classifier_id']
 
         progress = {"status":"ACCEPTED"}
-        ws.send(progress)
+        msg = json.dumps(progress)
+        ws.send(msg)
 
         # pre-process data to prepare for classification
         progress["status"] = "PROCESSING"
-        ws.send(progress)
+        msg = json.dumps(progress)
+        ws.send(msg)
         processed_array = processImgFromLocal('tests/res/example_input_image.tif') # TODO THIS DOESNT DOWNLOAD FROM S3
 
         # classify and write back current status on websocket
         progress["status"] = "CLASSIFYING"
-        ws.send(progress)
+        msg = json.dumps(progress)
+        ws.send(msg)
         # asyncio set so this route does not need to be an async function
         asyncio.set_event_loop(asyncio.new_event_loop())
         classified_array = asyncio.get_event_loop().run_until_complete(classify(classifier_id, processed_array)) # TODO MAKE await WORK INSTEAD OF THIS
@@ -68,14 +73,16 @@ def ws_process(ws):
 
         # build geojson from classified data
         progress["status"] = "BUILDING"
-        ws.send(progress)
+        msg = json.dumps(progress)
+        ws.send(msg)
         geojson = spoof_build_geojson(classified_array) # TODO GEOJSON BUILDER IS NOT WORKING, THIS IS SPOOFING THE BUILDING PROCESS
         # build_geojson(classified_array)
         
         # notify and return geojson, then close the connection
         progress["status"] = "DONE"
         progress["geojson"] = geojson
-        ws.send(progress)
+        msg = json.dumps(progress)
+        ws.send(msg)
         ws.close()
 
 # validate that the json has all the required fields
@@ -107,7 +114,7 @@ def build_geojson(classified_output):
 async def classify(classifier_id, processed_array):
     app.logger.debug("trying to connect to ws")
     try:    
-        async with websockets.connect("ws://192.168.1.195:5001/ws-classify",max_size=2 ** 30) as websocket:
+        async with websockets.connect(CLASSIFY_IP_PATH,max_size=2 ** 30) as websocket:
             # send request to classifier
             req = {"classifier_id":classifier_id, "image_data":processed_array.tolist()}
             await websocket.send(json.dumps(req))
@@ -133,19 +140,6 @@ async def classify(classifier_id, processed_array):
     except Exception as e:
         app.logger.error(e)     
         return []
-
-# def nosync_classify(processed_array):  
-#     try:
-#         # ws = websockets.connect("ws://127.0.0.1:5001/ws-classify")
-#         # req = {"classifier_id":13, "image_data":processed_array}
-#         # ws.send("ASYNC IS FOR FOOLS!!!")
-#         # message = ws.recv()
-#         # app.logger.warning("recieved from ws: " + message)
-#         # return message
-#         pass
-#     except Exception as e:
-#         app.logger.error(e)
-#         return []
 
 # spoof building the geojson since it broke
 def spoof_build_geojson(classified_output):
