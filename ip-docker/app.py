@@ -19,7 +19,7 @@ import asyncio
 import websockets
 import logging
 
-CLASSIFY_IP_PATH = "ws://100.64.3.32:5001/ws-classify"
+CLASSIFY_IP_PATH = "ws://100.64.220.102:5001/ws-classify"
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -50,8 +50,9 @@ def ws_process(ws):
         # now that it is known to be safe load json object
         request_json = json.loads(data)
         classifier_id = request_json['classifier_id']
-
+        image_ref = request_json['image_ref']
         progress = {"status":"ACCEPTED"}
+        progress['image_ref'] = image_ref
         msg = json.dumps(progress)
         ws.send(msg)
 
