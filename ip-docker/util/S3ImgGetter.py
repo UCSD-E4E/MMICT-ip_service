@@ -4,7 +4,7 @@ import os.path
 import boto3
 
 image_folder = 'images'
-config_file = 'service/S3Access.ini'
+config_file = 'service/s3_access.cfg'
 config_section = 'AWS_S3'
 download_img = 'output.tif'
 
