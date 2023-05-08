@@ -1,25 +1,20 @@
 import configparser
 import os.path
+import logging
 
 import boto3
 
-image_folder = 'images'
-config_file = 'service/S3Access.ini'
+image_folder = 'tests/res/'
+config_file = 'util/s3_access.cfg'
 config_section = 'AWS_S3'
-download_img = 'output.tif'
-
 
 def getImg(img_ref):
     """
     input: image reference to S3
-    output: image data
+    output: image url
     """
-    downloadImg(img_ref)
 
-    return "img"
-
-
-def downloadImg(img_ref):
+    imgUrl = os.path.join(image_folder, img_ref)
     config = configparser.ConfigParser()
     config.read(config_file)
     s3_section = config[config_section]
@@ -32,4 +27,10 @@ def downloadImg(img_ref):
         aws_access_key_id=access_key,
         aws_secret_access_key=secret_key,
     )
-    s3_client.download_file(bucket_name, img_ref, os.path.join(image_folder, download_img))
+    s3_client.download_file(bucket_name, img_ref, imgUrl)
+
+    return imgUrl
+
+
+def deleteImg():
+    pass
