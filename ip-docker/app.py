@@ -6,30 +6,28 @@ from flask_cors import CORS
 import requests
 import random
 import string
-import pickle # only needed for testing without classification service
+import pickle  # only needed for testing without classification service
 import json
 from threading import Thread, Lock
-from util.S3ImgGetter import getImg
+from util.s3_img_getter import getImg
 from flask_sock import Sock
 
 from util.image_processor import processImgFromLocal
-from util.image_processor import processImgFromS3
+from util.s3_img_getter import getImg, deleteImg
 import util.image_processor as image_processor
 import asyncio
 import websockets
 import logging
 
-CLASSIFY_IP_PATH = "ws://100.64.220.102:5001/ws-classify"
-
 logging.basicConfig(level=logging.DEBUG)
 
 app = Flask(__name__)
-CORS(app) # allow cross origin requests 
-sock = Sock(app) # create a websocket
+CORS(app)  # allow cross origin requests
+sock = Sock(app)  # create a websocket
 
-request_status = {} # holds the id and status of all current (and past) jobs
+request_status = {}  # holds the id and status of all current (and past) jobs
 status_lock = Lock()
-result_geojson = {} 
+result_geojson = {}
 
 
 @app.route("/")
@@ -37,54 +35,69 @@ def home():
     # asyncio.run(classify(1,[1,2,3]))
     return "<h1>Processing Server</h1>"
 
+
+@sock.route('/echo')
+def ws_echo(ws):
+    app.logger.debug("received echo request")
+    while (True):
+        data = ws.receive()
+        ws.send("Process Server is echoing: " + data)
+
+
 # route for accepting an incoming websocket request
 @sock.route('/ws-process')
 def ws_process(ws):
-        # recieve the websocket data
-        data = ws.receive()
+    app.logger.debug("received request")
 
-        # validate request matches expected json format
-        if not validate_process_request_json(data):
-            ws.send('invalid request, killing connection')
-            return
-        # now that it is known to be safe load json object
-        request_json = json.loads(data)
-        classifier_id = request_json['classifier_id']
-        image_ref = request_json['image_ref']
-        progress = {"status":"ACCEPTED"}
-        progress['image_ref'] = image_ref
-        msg = json.dumps(progress)
-        ws.send(msg)
+    # recieve the websocket data
+    data = ws.receive()
 
-        # pre-process data to prepare for classification
-        progress["status"] = "PROCESSING"
-        msg = json.dumps(progress)
-        ws.send(msg)
-        processed_array = processImgFromLocal('tests/res/example_input_image.tif') # TODO THIS DOESNT DOWNLOAD FROM S3
+    app.logger.debug("validating request: " + data)
 
-        # classify and write back current status on websocket
-        progress["status"] = "CLASSIFYING"
-        msg = json.dumps(progress)
-        ws.send(msg)
-        # asyncio set so this route does not need to be an async function
-        asyncio.set_event_loop(asyncio.new_event_loop())
-        classified_array = asyncio.get_event_loop().run_until_complete(classify(classifier_id, processed_array)) # TODO MAKE await WORK INSTEAD OF THIS
-        
-        # ws.send(classified_array) # TODO FOR TESTING ONLY
+    # validate request matches expected json format
+    if not validate_process_request_json(data):
+        ws.send('invalid request, killing connection')
+        return
 
-        # build geojson from classified data
-        progress["status"] = "BUILDING"
-        msg = json.dumps(progress)
-        ws.send(msg)
-        geojson = spoof_build_geojson(classified_array) # TODO GEOJSON BUILDER IS NOT WORKING, THIS IS SPOOFING THE BUILDING PROCESS
-        # build_geojson(classified_array)
-        
-        # notify and return geojson, then close the connection
-        progress["status"] = "DONE"
-        progress["geojson"] = geojson
-        msg = json.dumps(progress)
-        ws.send(msg)
-        ws.close()
+    # now that it is known to be safe load json object
+    request_json = json.loads(data)
+    classifier_id = request_json['classifier_id']
+    img_ref = request_json['image_ref']
+
+    progress = {"status": "ACCEPTED"}
+    ws.send(progress)
+
+    # pre-process data to prepare for classification
+    progress["status"] = "PROCESSING"
+    ws.send(progress)
+
+    imgUrl = getImg(img_ref)
+    # processed_array = processImgFromLocal('tests/res/example_input_image.tif')  # TODO THIS DOESNT DOWNLOAD FROM S3
+    processed_array = processImgFromLocal(imgUrl)
+
+    # classify and write back current status on websocket
+    progress["status"] = "CLASSIFYING"
+    ws.send(progress)
+    # asyncio set so this route does not need to be an async function
+    asyncio.set_event_loop(asyncio.new_event_loop())
+    classified_array = asyncio.get_event_loop().run_until_complete(
+        classify(classifier_id, processed_array))  # TODO MAKE await WORK INSTEAD OF THIS
+
+    # ws.send(classified_array) # TODO FOR TESTING ONLY
+
+    # build geojson from classified data
+    progress["status"] = "BUILDING"
+    ws.send(progress)
+    geojson = spoof_build_geojson(
+        classified_array)  # TODO GEOJSON BUILDER IS NOT WORKING, THIS IS SPOOFING THE BUILDING PROCESS
+    # build_geojson(classified_array)
+
+    # notify and return geojson, then close the connection
+    progress["status"] = "DONE"
+    progress["geojson"] = geojson
+    ws.send(progress)
+    ws.close()
+
 
 # validate that the json has all the required fields
 # Note: This only checks that the required fields exists and ignores any additinoal fields
@@ -105,19 +118,21 @@ def validate_process_request_json(data):
     except Exception as e:
         app.logger.error(e)
         return False
-    
+
+
 # build a geojson object from the classified output
 def build_geojson(classified_output):
     image_processor.buildGeoJson(classified_output)
     return []
 
+
 # takes a processed_array and classifies it using a websocket connection to the classificaiton service
 async def classify(classifier_id, processed_array):
     app.logger.debug("trying to connect to ws")
-    try:    
-        async with websockets.connect(CLASSIFY_IP_PATH,max_size=2 ** 30) as websocket:
+    try:
+        async with websockets.connect("ws://192.168.1.195:5001/ws-classify", max_size=2 ** 30) as websocket:
             # send request to classifier
-            req = {"classifier_id":classifier_id, "image_data":processed_array.tolist()}
+            req = {"classifier_id": classifier_id, "image_data": processed_array.tolist()}
             await websocket.send(json.dumps(req))
 
             # get ACCEPTED response
@@ -126,7 +141,7 @@ async def classify(classifier_id, processed_array):
             if message != "ACCEPTED":
                 app.log.error("classifier rejected request")
                 return []
-            
+
             # check for DONE response indicating next message is the array
             message = await websocket.recv()
             app.logger.debug("recieved from ws: " + message)
@@ -139,8 +154,22 @@ async def classify(classifier_id, processed_array):
             return result
 
     except Exception as e:
-        app.logger.error(e)     
+        app.logger.error(e)
         return []
+
+
+# def nosync_classify(processed_array):
+#     try:
+#         # ws = websockets.connect("ws://127.0.0.1:5001/ws-classify")
+#         # req = {"classifier_id":13, "image_data":processed_array}
+#         # ws.send("ASYNC IS FOR FOOLS!!!")
+#         # message = ws.recv()
+#         # app.logger.warning("recieved from ws: " + message)
+#         # return message
+#         pass
+#     except Exception as e:
+#         app.logger.error(e)
+#         return []
 
 # spoof building the geojson since it broke
 def spoof_build_geojson(classified_output):
@@ -148,6 +177,7 @@ def spoof_build_geojson(classified_output):
     with open('tests/res/labels.geojson') as fd:
         geojson = json.load(fd)
     return geojson
+
 
 # pretend to call classification with sample data
 def spoof_classify(array):
