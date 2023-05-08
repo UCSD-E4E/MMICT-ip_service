@@ -1,2 +1,2 @@
-service/*.ini
-images/*.tif
+ip-docker/util/s3_access.cfg
+images/*
