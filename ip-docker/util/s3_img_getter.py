@@ -4,7 +4,7 @@ import logging
 
 import boto3
 
-image_folder = 'tests/res/'
+image_folder = 'images/'
 config_file = 'util/s3_access.cfg'
 config_section = 'AWS_S3'
 

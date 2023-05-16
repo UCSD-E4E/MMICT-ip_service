@@ -1,2 +1,3 @@
 ip-docker/util/s3_access.cfg
 images/*
+*.ini
