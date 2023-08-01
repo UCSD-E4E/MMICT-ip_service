@@ -1,0 +1,47 @@
+<html>
+    <head>
+        <title>Websocket tester</title>
+    </head>
+    <body>
+        <h1>Testing websockets...</h1>
+        <label for="addr">Enter address to connect to</label>
+        <input type="text" id="addr" name="addr" value="ws://127.0.0.1:5001/echo">
+        <button id="createSocket">Connect</button>
+        <label for="addr">Enter message to send</label>
+        <form onsubmit="return false">
+            <input type="text" id="message" name="message">
+            <button type="submit" id="socketSend">Send</button>
+        </form>
+        <output id="chatlog"><b>Message Sent</b><em>[address]</em>Message Recieved
+            <hr></output>
+        <script>
+            let addr_input = document.getElementById('addr')
+            let currentSocket = null
+            document.getElementById('createSocket').addEventListener('click', () => createSocket(addr_input.value))
+            document.getElementById('socketSend').addEventListener('click', () => sendMsg(message.value))
+            function createSocket(addr){
+                currentSocket = new WebSocket(addr);
+                currentSocket.addEventListener('message', (m) => writeToOutput("<em>[" + addr + "]</em>:  " + m.data));
+                currentSocket.addEventListener("error", (m) => writeToOutput("ERROR:<em>[" + addr + "]</em>:  " + m.data));
+                // writeToOutput("status: " + currentSocket.readyState + "\n")
+                console.log(currentSocket)
+            }
+
+            function sendMsg(msg){
+                writeToOutput("<b>" + msg + "</b>")
+                currentSocket.send(msg)
+            }
+            
+
+            function writeToOutput(msg){
+                chatlog = document.getElementById("chatlog")
+                chatlog.innerHTML = chatlog.innerHTML + msg + "\n"
+            }
+        </script>
+        <style>
+            #chatlog {
+                white-space: pre-wrap;
+            }
+        </style>
+    </body>
+</html>
