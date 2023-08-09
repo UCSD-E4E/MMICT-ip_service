@@ -27,7 +27,7 @@ sock = Sock(app)  # create a websocket
 CORS(app)  # allow cross origin requests
 
 # IP and port address of the classification service
-CLASSIFY_IP = "100.64.112.224"
+CLASSIFY_IP = "100.64.112.224" # "container-service"
 CLASSIFY_PORT = "5000"
 
 # used to test if the server is up and running
