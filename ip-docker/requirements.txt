@@ -18,6 +18,7 @@ h11==0.14.0
 websockets==11.0.2
 geopandas==0.12.2
 pandas==1.5.3
+gunicorn==21.2.0
 # simple-websocket==0.10.0 
 # wsproto==1.2.0
 # websocket==0.2.1
