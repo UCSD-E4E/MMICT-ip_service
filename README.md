@@ -4,4 +4,12 @@ To build, navigate to the /ip-docker directory and use:
 
 To run flask app use:
 
-`docker run -p 5000:5000 ip_service`
+`docker run -p {HOST_MACHINE_PORT}:5000 ip_service`
+
+For example, running the following makes the service accessible at http://localhost:8080
+
+`docker run -p 8080:5000 ip_service`
+
+For testing with the central webserver, follow the build instructions for the webserver and run the following:
+
+`docker run -p {HOST_MACHINE_PORT}:5000 --net=mmict_bridge ip_service`
