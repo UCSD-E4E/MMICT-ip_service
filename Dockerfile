@@ -4,9 +4,6 @@ FROM --platform=linux/amd64 python:3.9-slim-buster
 # Set working directory
 WORKDIR /ip_service
 
-# Expose the port the app runs on
-EXPOSE 8080
-
 # Install system dependencies required for Poetry and your project
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -35,6 +32,9 @@ COPY pyproject.toml poetry.lock* /ip_service/
 # Install project dependencies
 RUN poetry config virtualenvs.create false \
     && poetry install --no-interaction --no-ansi
+
+# Expose the port the app runs on
+EXPOSE 8080
 
 # Copy the rest of the application
 COPY . /ip_service/
