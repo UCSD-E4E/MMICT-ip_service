@@ -9,16 +9,18 @@ import pickle  # only needed for testing without classification service
 import json
 import asyncio
 import websockets
-import util.image_processor as image_processor
 
 from threading import Thread, Lock
-from util.s3_img_getter import getImg
 from flask_sock import Sock
 from flask import Flask, request, make_response
 from flask_cors import CORS
-from util.image_processor import processImgFromLocal
-from util.s3_img_getter import getImg, deleteImg
 
+# Ultility functions, using relative imports here since we are using a poetry entrypoint to run our Flask server
+# Using absolute imports results in Module not found errors whenever we try to call functions from the util directory
+from .util import image_processor
+from .util.s3_img_getter import getImg
+from .util.image_processor import processImgFromLocal
+from .util.s3_img_getter import getImg, deleteImg
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -228,3 +230,7 @@ def spoof_classify(array):
     with open('tests/res/classification_test_result.dump', 'rb') as fd:
         output = pickle.load(fd)
         return output
+
+# callable function to run server, included this in order to define our poetry entrypoint
+def main():
+    app.run(debug=False, port=5000, host='0.0.0.0')

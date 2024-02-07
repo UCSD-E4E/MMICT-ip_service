@@ -8,7 +8,7 @@ Consists of the following useful functions
 from rasterio.plot import reshape_as_image, reshape_as_raster
 import rasterio
 import rioxarray
-from util import features
+from . import features # relative import for util.features
 from rasterio.features import shapes
 import geopandas as gpd
 import numpy as np

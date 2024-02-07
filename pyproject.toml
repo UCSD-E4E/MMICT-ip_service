@@ -1,8 +1,13 @@
 [tool.poetry]
-name = "MM-ip-service"
+name = "mm_image_processing"
 version = "0.1.0"
+packages = [] # add required pacakges later?
 description = "IP service for MM team in E4E"
-authors = []
+authors = ["E4E - Mangrove Monitoring SWE Team"]
+
+# poetry entrypoint for running our Flask server
+[tool.poetry.scripts]
+image-processing-server = "mm_image_processing.server:main"
 
 [tool.poetry.dependencies]
 python = "^3.9"
