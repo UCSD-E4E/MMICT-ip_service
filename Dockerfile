@@ -1,5 +1,5 @@
-# FOR ARM64, 
-FROM --platform=linux/amd64 python:3.9-slim-buster
+# FOR ARM64, we are using Python 3.9.18 on Debian 12
+FROM --platform=linux/amd64 python:3.9-slim-bookworm
 
 # Install system dependencies
 RUN apt-get update \
@@ -31,4 +31,4 @@ RUN poetry config virtualenvs.create false && poetry install --no-interaction --
 EXPOSE 8080
 
 # poetry entrypoint to run the service
-ENTRYPOINT ["poetry", "run", "image-processing-server"]
+ENTRYPOINT ["/usr/local/bin/image-processing-server"]

@@ -15,12 +15,11 @@ from flask_sock import Sock
 from flask import Flask, request, make_response
 from flask_cors import CORS
 
-# Ultility functions, using relative imports here since we are using a poetry entrypoint to run our Flask server
-# Using absolute imports results in Module not found errors whenever we try to call functions from the util directory
-from .util import image_processor
-from .util.s3_img_getter import getImg
-from .util.image_processor import processImgFromLocal
-from .util.s3_img_getter import getImg, deleteImg
+# Ultility functions from the util directory
+from mm_image_processing.util import image_processor
+from mm_image_processing.util.s3_img_getter import getImg
+from mm_image_processing.util.image_processor import processImgFromLocal
+from mm_image_processing.util.s3_img_getter import getImg, deleteImg
 
 logging.basicConfig(level=logging.DEBUG)
 

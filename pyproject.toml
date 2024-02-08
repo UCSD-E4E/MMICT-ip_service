@@ -1,8 +1,8 @@
 [tool.poetry]
-name = "mm_image_processing"
+name = "mm-image-processing"
 version = "0.1.0"
-packages = [] # add required pacakges later?
-description = "IP service for MM team in E4E"
+packages = [{ include = "mm_image_processing" }] # this is for including packages we made in our distribution
+description = "IP service for the Mangrove  team in E4E"
 authors = ["E4E - Mangrove Monitoring SWE Team"]
 
 # poetry entrypoint for running our Flask server
