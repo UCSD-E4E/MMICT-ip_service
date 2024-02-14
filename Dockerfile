@@ -30,5 +30,5 @@ RUN poetry config virtualenvs.create false && poetry install --no-interaction --
 
 EXPOSE 8080
 
-# poetry entrypoint to run the service
+# poetry entrypoint to run the service, this executable is stored in our Docker container's file system
 ENTRYPOINT ["/usr/local/bin/image-processing-server"]
