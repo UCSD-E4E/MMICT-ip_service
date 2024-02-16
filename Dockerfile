@@ -10,8 +10,7 @@ RUN apt-get update \
        binutils \
        libproj-dev \
        gdal-bin \
-       libgdal-dev \
-       curl
+       libgdal-dev
 
 # Environment variables for GDAL
 ENV CPLUS_INCLUDE_PATH=/usr/include/gdal \
