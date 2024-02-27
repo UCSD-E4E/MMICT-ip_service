@@ -1,7 +1,7 @@
 # FOR ARM64, we are using Python 3.9.18 on Debian 12
 FROM --platform=linux/amd64 python:3.9-slim-bookworm
 
-# Install system dependencies, included OpenGL support and  for Open CV
+# Install system dependencies, included OpenGL support and Glib for Open CV
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
        python3-pip \
