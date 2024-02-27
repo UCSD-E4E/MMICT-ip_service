@@ -1,16 +1,15 @@
 # FOR ARM64, we are using Python 3.9.18 on Debian 12
 FROM --platform=linux/amd64 python:3.9-slim-bookworm
 
-# Install system dependencies
+# Install system dependencies, included OpenGL support and  for Open CV
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-       ffmpeg \
-       libsm6 \
-       libxext6 \
-       binutils \
+       python3-pip \
        libproj-dev \
        gdal-bin \
-       libgdal-dev
+       libgdal-dev \
+       libgl1-mesa-glx \
+       libglib2.0-0 
 
 # Environment variables for GDAL
 ENV CPLUS_INCLUDE_PATH=/usr/include/gdal \
