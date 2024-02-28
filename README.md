@@ -17,26 +17,4 @@ For testing with the central webserver, follow the build instructions for the we
 
 "docker run -p {HOST_MACHINE_PORT}:5000 --net=mmict_bridge ip_service"
 
-# Libraries and Dependencies:
-
-Below is the preiouvs requirements.txt file:
-(Still sorting through what will be required for our IP service)
-
-Flask==2.3.1
-requests==2.28.2
-boto3==1.26.120
-numpy==1.24.3
-rasterio==1.3.6
-rioxarray==0.14.1
-xarray==2023.4.2
-distancerasters==0.3.2
-opencv-contrib-python==4.7.0.72
-dask==2023.4.0
-simplejson==3.19.1
-Flask-Cors==3.0.10
-flask-sock==0.6.0 
-h11==0.14.0 
-websockets==11.0.2
-geopandas==0.12.2
-pandas==1.5.3
 

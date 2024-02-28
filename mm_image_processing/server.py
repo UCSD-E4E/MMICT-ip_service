@@ -1,25 +1,24 @@
 """
 
 """
-import logging
-import requests
-import random
-import string
-import pickle  # only needed for testing without classification service
-import json
-import asyncio
-import websockets
+import asyncio  
+import json  
+import logging  
+import pickle  # only needed for testing without classification service  
+import random  
+import string  
+from threading import Lock, Thread  
 
-from threading import Thread, Lock
-from flask_sock import Sock
-from flask import Flask, request, make_response
-from flask_cors import CORS
+import requests  
+import websockets  
+from flask import Flask, make_response, request  
+from flask_cors import CORS  
+from flask_sock import Sock  
 
-# Ultility functions from the util directory
-from mm_image_processing.util import image_processor
-from mm_image_processing.util.s3_img_getter import getImg
-from mm_image_processing.util.image_processor import processImgFromLocal
-from mm_image_processing.util.s3_img_getter import getImg, deleteImg
+# Ultility functions from the util directory  
+from mm_image_processing.util import image_processor  
+from mm_image_processing.util.image_processor import processImgFromLocal  
+from mm_image_processing.util.s3_img_getter import deleteImg, getImg  
 
 logging.basicConfig(level=logging.DEBUG)
 
