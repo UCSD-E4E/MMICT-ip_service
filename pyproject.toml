@@ -1,0 +1,37 @@
+[tool.poetry]
+name = "mm-image-processing"
+version = "0.1.0"
+packages = [{ include = "mm_image_processing" }] # this is for including packages we made in our distribution
+description = "IP service for the Mangrove  team in E4E"
+authors = [
+    'Christopher L. Crutchfield <ccrutchf@ucsd.edu>',
+    'Zach Lawrence <zclawrence@ucsd.edu>',
+    'Hou Wai Wan <h1wan@ucsd.edu>',
+    'Leon Lin',
+    'Devin Muzzy'
+]
+
+# poetry entrypoint for running our Flask server
+[tool.poetry.scripts]
+image-processing-server = "mm_image_processing.server:main"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+Flask = "^2.3"
+boto3 = "^1.26"
+numpy = "^1.24"
+rasterio = "^1.3"
+distancerasters = "^0.3"
+rioxarray = "^0.14"
+xarray = "^2023.4"
+Flask-Cors = "^3.0"
+flask-sock = "^0.6"
+websockets = "^11.0"
+geopandas = "^0.14"
+opencv-python = "^4.7"
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

@@ -1,24 +1,24 @@
 """
 
 """
-import logging
-import requests
-import random
-import string
-import pickle  # only needed for testing without classification service
-import json
-import asyncio
-import websockets
-import util.image_processor as image_processor
+import asyncio  
+import json  
+import logging  
+import pickle  # only needed for testing without classification service  
+import random  
+import string  
+from threading import Lock, Thread  
 
-from threading import Thread, Lock
-from util.s3_img_getter import getImg
-from flask_sock import Sock
-from flask import Flask, request, make_response
-from flask_cors import CORS
-from util.image_processor import processImgFromLocal
-from util.s3_img_getter import getImg, deleteImg
+import requests  
+import websockets  
+from flask import Flask, make_response, request  
+from flask_cors import CORS  
+from flask_sock import Sock  
 
+# Ultility functions from the util directory  
+from mm_image_processing.util import image_processor  
+from mm_image_processing.util.image_processor import processImgFromLocal  
+from mm_image_processing.util.s3_img_getter import deleteImg, getImg  
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -228,3 +228,7 @@ def spoof_classify(array):
     with open('tests/res/classification_test_result.dump', 'rb') as fd:
         output = pickle.load(fd)
         return output
+
+# callable function to run server, included this in order to define our poetry entrypoint
+def main():
+    app.run(debug=False, port=5000, host='0.0.0.0')

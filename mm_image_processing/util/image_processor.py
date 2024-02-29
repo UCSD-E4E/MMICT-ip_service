@@ -5,15 +5,16 @@ Consists of the following useful functions
     - processImgFromLocal : process image from local directory
     - buildGeoJson : convert classified data to geojson
 """
-from rasterio.plot import reshape_as_image, reshape_as_raster
-import rasterio
-import rioxarray
-from util import features
-from rasterio.features import shapes
+import logging
+
 import geopandas as gpd
 import numpy as np
+import rasterio
+import rioxarray
+from rasterio.features import shapes
+from rasterio.plot import reshape_as_image, reshape_as_raster
 
-import logging
+from mm_image_processing.util import features
 
 logging.basicConfig(level=logging.DEBUG)
 
