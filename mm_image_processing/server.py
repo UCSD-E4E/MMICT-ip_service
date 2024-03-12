@@ -11,6 +11,7 @@ from threading import Lock, Thread
 
 import requests  
 import websockets  
+import numpy as np
 from flask import Flask, make_response, request  
 from flask_cors import CORS  
 from flask_sock import Sock  
@@ -228,6 +229,37 @@ def spoof_classify(array):
     with open('tests/res/classification_test_result.dump', 'rb') as fd:
         output = pickle.load(fd)
         return output
+
+def score_img(img_array, img_date, target_date):
+    pixels = img_array.shape[0] * img_array.shape[1]
+    land_pixels = 0 
+    useful_pixels = 0
+
+    x = date_diff(img_date, target_date) 
+    date_coef = np.exp(-0.1 * x**1.1)
+
+    for i in range(len(img_array)):
+        for j in range(len(img_array[i])):
+            if not is_ocean(img_array, i, j):
+                land_pixels += 1
+                if is_cloud(img_array, i, j):
+                    useful_pixels += 1
+    
+    return date_coef * (useful_pixels / land_pixels)
+                    
+    
+    
+def date_diff(date1, date2):
+    return (date1 - date2).days
+
+def is_ocean(img_array, y, x):
+    return random.choice([True, False])
+
+def is_cloud(img_array, y, x):
+    return random.choice([True, False])
+
+
+
 
 # callable function to run server, included this in order to define our poetry entrypoint
 def main():
