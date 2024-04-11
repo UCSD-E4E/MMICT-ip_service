@@ -10,21 +10,34 @@ def ndvi(nir, red):
 def ndwi(nir, green):
     return ((green - nir) / (green + nir))
 
-def s2_ndvi(raster):
+def s2_ndvi(raster, app):
     if isinstance(raster, xarray.Dataset):
-        red = raster.get(4)
-        nir = raster.get(8)
+        app.logger.info("RASTER ----------------")
+        app.logger.info(raster)
+        app.logger.info("VARIABLES ------------")
+        app.logger.info(raster.variables)
+        app.logger.info("ITEMS ----------------")
+        app.logger.info(raster.items)
+        app.logger.info("------------ raster is xarray dataset -------------")
+        #has to do with channels?
+        # red = raster.get(4)
+        # nir = raster.get(8)
+        red = raster.get(1)
+        nir = raster.get(4)
     elif isinstance(raster, rasterio.DatasetReader):
         red = raster.read(8)
         nir = raster.read(4)
     else:
         return None
-
+    app.logger.info(red)
+    app.logger.info(nir)
     return ndvi(nir, red)
 
 def s2_ndwi(raster):
     if isinstance(raster, xarray.Dataset):
-        nir = raster.get(8)
+        # nir = raster.get(8)
+        # green = raster.get(3)
+        nir = raster.get(4)
         green = raster.get(3)
     elif isinstance(raster, rasterio.DatasetReader):
         nir = raster.read(8)

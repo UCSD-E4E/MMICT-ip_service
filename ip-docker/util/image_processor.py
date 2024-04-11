@@ -17,7 +17,7 @@ import logging
 
 logging.basicConfig(level=logging.DEBUG)
 
-def processImgFromLocal(img):
+def processImgFromLocal(img, app):
     """
     Processes an image from the local file system.
 
@@ -31,8 +31,10 @@ def processImgFromLocal(img):
                The processed data array is a NumPy array.
     """
 
-    dataset = imageToDataset(img)
-    addFeatures(dataset=dataset)
+    img = 'util/site01-ortho.tif'
+    dataset = imageToDataset(img, app)
+    #dataset=dataset keyword arg
+    addFeatures(dataset, app)
     array = formatData(dataset)
     # boundry box and image.shape are needed to construct the geojson after classifying
     bbox = dataset.rio.bounds()
@@ -42,16 +44,15 @@ def processImgFromLocal(img):
 
 
 # loads img from path imgUrl and returns a corrosponding dataset
-def imageToDataset(imgUrl:str):
+def imageToDataset(imgUrl:str, app):
     # load data into inputArray then convert it into a dataset for img processing
     inputArray = rioxarray.open_rasterio(imgUrl,chunks=True)
     inputDataSet = inputArray.to_dataset(dim='band')
-
     return inputDataSet
 
 
-def addFeatures(dataset):
-    dataset['ndvi'] = features.s2_ndvi(dataset)
+def addFeatures(dataset, app):
+    dataset['ndvi'] = features.s2_ndvi(dataset, app)
     dataset['nvwi'] = features.s2_ndwi(dataset)
     dataset['water_dist'] = features.s2_distance_to_water(dataset, threshold = 0)
     return dataset

@@ -4,11 +4,13 @@ import logging
 
 import boto3
 
-image_folder = 'images/'
+#For no folder in S3 bucket, use the following
+image_folder = ''
+
 config_file = 'util/s3_access.cfg'
 config_section = 'AWS_S3'
 
-def getImg(img_ref):
+def getImg(img_ref, app):
     """
     input: image reference to S3
     output: image url
@@ -27,6 +29,7 @@ def getImg(img_ref):
         aws_access_key_id=access_key,
         aws_secret_access_key=secret_key,
     )
+    
     s3_client.download_file(bucket_name, img_ref, imgUrl)
 
     return imgUrl
