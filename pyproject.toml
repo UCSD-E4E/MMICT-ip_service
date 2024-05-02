@@ -29,6 +29,7 @@ flask-sock = "^0.6"
 websockets = "^11.0"
 geopandas = "^0.14"
 opencv-python = "^4.7"
+python-dotenv = "^1.0"
 
 [tool.poetry.dev-dependencies]
 

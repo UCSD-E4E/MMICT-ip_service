@@ -7,6 +7,8 @@ import logging
 import pickle  # only needed for testing without classification service  
 import random  
 import string  
+import os
+from dotenv import load_dotenv
 from threading import Lock, Thread  
 
 import requests  
@@ -21,6 +23,7 @@ from mm_image_processing.util.image_processor import processImgFromLocal
 from mm_image_processing.util.s3_img_getter import deleteImg, getImg  
 
 logging.basicConfig(level=logging.DEBUG)
+load_dotenv()
 
 app = Flask(__name__)
 sock = Sock(app)  # create a websocket
@@ -29,6 +32,8 @@ CORS(app)  # allow cross origin requests
 # IP and port address of the classification service
 CLASSIFY_IP = "100.64.112.224" # "container-service"
 CLASSIFY_PORT = "5000"
+IMAGE_SERVICE_IP = os.getenv("HOST_IP")
+IMAGE_SERVICE_PORT = os.getenv("PORT")
 
 # used to test if the server is up and running
 @app.route("/")
@@ -231,4 +236,4 @@ def spoof_classify(array):
 
 # callable function to run server, included this in order to define our poetry entrypoint
 def main():
-    app.run(debug=False, port=5000, host='0.0.0.0')
+    app.run(debug=False, port=IMAGE_SERVICE_PORT, host=IMAGE_SERVICE_IP)
