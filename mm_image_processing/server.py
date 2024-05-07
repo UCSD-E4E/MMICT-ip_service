@@ -1,26 +1,29 @@
 """
 
 """
-import asyncio  
-import json  
-import logging  
-import pickle  # only needed for testing without classification service  
-import random  
-import string  
+import math
+import logging
+import requests
+import random
+import string
+import pickle  # only needed for testing without classification service
+import json
+import asyncio
+import websockets
+import zlib
 import os
-from dotenv import load_dotenv
-from threading import Lock, Thread  
 
-import requests  
-import websockets  
-from flask import Flask, make_response, request  
-from flask_cors import CORS  
-from flask_sock import Sock  
+from dotenv import load_dotenv
+from threading import Thread, Lock
+from flask_sock import Sock
+from flask import Flask, request, make_response
+from flask_cors import CORS
+from flask_csp.csp import csp_header
 
 # Ultility functions from the util directory  
 from mm_image_processing.util import image_processor  
 from mm_image_processing.util.image_processor import processImgFromLocal  
-from mm_image_processing.util.s3_img_getter import deleteImg, getImg  
+from mm_image_processing.util.s3_img_getter import deleteImg, getImg
 
 logging.basicConfig(level=logging.DEBUG)
 load_dotenv()
@@ -30,12 +33,11 @@ sock = Sock(app)  # create a websocket
 CORS(app)  # allow cross origin requests
 
 # IP and port address of the classification service
-CLASSIFY_IP = "100.64.112.224" # "container-service"
-CLASSIFY_PORT = "5000"
+CLASSIFY_IP = "172.18.0.3" # "container-service"
+CLASSIFY_PORT = "5001" 
 IMAGE_SERVICE_IP = os.getenv("HOST_IP")
 IMAGE_SERVICE_PORT = os.getenv("PORT")
 
-# used to test if the server is up and running
 @app.route("/")
 def home():
     return "<h1>Processing Server</h1>"
@@ -43,11 +45,11 @@ def home():
 # for testing websocket connections
 @sock.route('/echo')
 def ws_echo(ws):
-    app.logger.debug("received echo request")
+    app.logger.debug("received echo request!!!")
     while (True):
         data = ws.receive()
-        ws.send("Process Server is echoing: " + data)
-
+        reverse = data[::-1]
+        ws.send(reverse)
 
 @sock.route('/ws-process')
 def ws_process(ws):
@@ -76,71 +78,111 @@ def ws_process(ws):
         return
 
     # now that it is known to be "safe" load json object, accept the request
-    request_json = json.loads(data)
+    request_json = json.loads(data, strict=False)
     classifier_id = request_json['classifier_id']
     img_ref = request_json['image_ref']
 
     # write back progress update on the websocket
-    progress = {"status": "ACCEPTED"}
+    progress = {"status": "ACCEPTED", "percent": 10}
     msg = json.dumps(progress)
     ws.send(msg)
 
     # write back progress again
     progress["status"] = "DOWNLOADING"
+    progress["percent"] = 20
     msg = json.dumps(progress)
     ws.send(msg)
 
     # try to download the image at img_ref from the s3 bucket
+
+    # Note: For the dummy-upload branch, the file being downloaded is NOT the one being returned back, this
+    # is simply a sanity check to ensure the download is working properly. It may be valuable to keep this 
+    # to ensure any production-ready code is playing nicely with S3 as expected.
     try:
-        imgUrl = getImg(img_ref)
+        imgUrl = getImg(img_ref, app)
     except Exception as e:
         app.logger.error(e)
         ws.close(1)
         return
     
-    # write back progress again
+    # # write back progress again
     progress["status"] = "PROCESSING"
+    progress["percent"] = 30
     msg = json.dumps(progress)
     ws.send(msg)
 
-    # process the image now that it is downloaded locally
-    img_shape, bbox, processed_array = processImgFromLocal(imgUrl)
+    # Currently, all processing is skipped in the pipeline for the purposes of demoing the GEOJSon transfer between services
+    # as the processing has some issues that I'm currently resolving. The architecture between the services is complete, however.
+    # -------------------------------------------------------------
+    
+    # # process the image now that it is downloaded locally
+    # img_shape, bbox, processed_array = processImgFromLocal(imgUrl, app)
 
-    # write back progress update
-    progress["status"] = "CLASSIFYING"
-    # progress["bbox"] = bbox # write bbox back for debugging purpose only
-    msg = json.dumps(progress)
-    ws.send(msg)
+    # # write back progress update
+    # progress["status"] = "CLASSIFYING"
+    # # progress["bbox"] = bbox # write bbox back for debugging purpose only
+    # msg = json.dumps(progress)
+    # ws.send(msg)
 
-    # call the classify() method to get classified data from classification_service
-    # * asyncio set so this route does not need to be an async function *
-    asyncio.set_event_loop(asyncio.new_event_loop())
-    classified_array = asyncio.get_event_loop().run_until_complete(
-        classify(classifier_id, processed_array))  # NOTE use await instead of this since it is cleaner
+    # # call the classify() method to get classified data from classification_service
+    # # * asyncio set so this route does not need to be an async function *
+    # asyncio.set_event_loop(asyncio.new_event_loop())
+    # classified_array = asyncio.get_event_loop().run_until_complete(
+    #     classify(classifier_id, processed_array))  # NOTE use await instead of this since it is cleaner
 
-    # check if classify() method failed
-    if classified_array is None:
-        ws.send('classification_service error')
-        ws.close(1)
-        return
+    # # check if classify() method failed
+    # if classified_array is None:
+    #     ws.send('classification_service error')
+    #     ws.close(1)
+    #     return
     
 
-    # write back progress update
-    progress["status"] = "BUILDING"
+    # # write back progress update
+    # progress["status"] = "BUILDING"
+    # msg = json.dumps(progress)
+    # ws.send(msg)
+
+    # # build geojson from classified data, then convert to a serializable json format
+    # geojson_raw = build_geojson(img_shape, bbox, classified_array)
+    # geojson = geojson_raw.to_json()
+
+    f = open('labels.json')
+    geojson = json.load(f)
+    progress["status"] = "COMPRESSING GEODATA"
+    progress["percent"] = 70
+    msg = json.dumps(progress)
+    ws.send(msg)
+    compressed = zlib.compress(json.dumps(geojson).encode(), 3)
+
+    progress["status"] = "RECEIVING GEODATA"
+    progress["percent"] = 80
+    progress["geojson_flag"] = "sending"    
     msg = json.dumps(progress)
     ws.send(msg)
 
-    # build geojson from classified data, then convert to a serializable json format
-    geojson_raw = build_geojson(img_shape, bbox, classified_array)
-    geojson = geojson_raw.to_json()
-
-    # final writeback on websocket, then close connection
+    geojson_chunks = chunk_geojson(geojson)
+    progress_increment = 20 / len(geojson_chunks)
+    for i in range(len(geojson_chunks)):
+        progress["geojson_chunk"] = geojson_chunks[i]
+        progress["percent"] = round(80 + (i * progress_increment), 2)
+        msg = json.dumps(progress)
+        ws.send(msg)
+    progress["geojson_flag"] = "done"
     progress["status"] = "DONE"
-    progress["geojson"] = geojson    
+    progress["percent"] = 100
     msg = json.dumps(progress)
+    
+    # final writeback on websocket, then close connection
     ws.send(msg)
     ws.close()
 
+def chunk_geojson(geojson):
+    msg = json.dumps(geojson)
+    chunks = []
+    chunk_length = 4096
+    for i in range(math.ceil(len(msg) / chunk_length)):
+        chunks.append(msg[(chunk_length * i) : (chunk_length * (i + 1))])
+    return chunks
 
 def validate_process_request_json(data):
     """
@@ -156,7 +198,7 @@ def validate_process_request_json(data):
 
     app.logger.debug("validating request: " + data)
     try:
-        request_json = json.loads(data)
+        request_json = json.loads(data, strict=False)
         if 'processor_id' not in request_json:
             app.logger.warning("no processor_id")
             return False
@@ -166,11 +208,11 @@ def validate_process_request_json(data):
         if 'image_ref' not in request_json:
             app.logger.warning("no image_ref")
             return False
+        app.logger.debug("Validated request successfully")
         return True
     except Exception as e:
         app.logger.error(e)
         return False
-
 
 # build a geojson object from the classified output 
 def build_geojson(img_shape, bbox, classified_output):
@@ -194,19 +236,19 @@ async def classify(classifier_id, processed_array):
             # send request to classifier
             req = {"classifier_id": classifier_id, "image_data": processed_array.tolist()}
             await websocket.send(json.dumps(req))
-
+    
             # check for ACCEPTED response
             message = await websocket.recv()
             app.logger.debug("recieved from ws: " + message)
             if message != "ACCEPTED":
-                app.log.error("classifier rejected request")
+                app.logger.error("classifier rejected request")
                 return None
 
             # check for DONE response indicating next message is the array
             message = await websocket.recv()
             app.logger.debug("recieved from ws: " + message)
             if message != "DONE":
-                app.log.error("Classifier failed")
+                app.logger.error("Classifier failed")
                 return None
             
             # get classified array and return it
@@ -218,7 +260,6 @@ async def classify(classifier_id, processed_array):
     except Exception as e:
         app.logger.error(e)
         return None
-
 
 # spoof building the geojson since it broke
 def spoof_build_geojson(classified_output):
