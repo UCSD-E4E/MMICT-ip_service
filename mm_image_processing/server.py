@@ -145,8 +145,14 @@ def ws_process(ws):
     # # build geojson from classified data, then convert to a serializable json format
     # geojson_raw = build_geojson(img_shape, bbox, classified_array)
     # geojson = geojson_raw.to_json()
-
-    f = open('labels.json')
+    try:
+        f = open('mm_image_processing/labels.json') # working directory is at /ip-service, as defined in the Dockerfile
+    except Exception as e:
+        app.logger.error(e)
+        print(os.getcwd())
+        ws.close(1)
+        return
+    
     geojson = json.load(f)
     progress["status"] = "COMPRESSING GEODATA"
     progress["percent"] = 70
