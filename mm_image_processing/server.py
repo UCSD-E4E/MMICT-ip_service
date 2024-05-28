@@ -38,6 +38,12 @@ CLASSIFY_PORT = "5001"
 IMAGE_SERVICE_IP = os.getenv("HOST_IP")
 IMAGE_SERVICE_PORT = os.getenv("PORT")
 
+# Configure Flask logging
+if not app.debug:
+    gunicorn_logger = logging.getLogger('gunicorn.error')
+    app.logger.handlers = gunicorn_logger.handlers
+    app.logger.setLevel(gunicorn_logger.level)
+
 @app.route("/")
 def home():
     return "<h1>Processing Server</h1>"
@@ -281,6 +287,5 @@ def spoof_classify(array):
         output = pickle.load(fd)
         return output
 
-# callable function to run server, included this in order to define our poetry entrypoint
-def main():
-    app.run(debug=False, port=IMAGE_SERVICE_PORT, host=IMAGE_SERVICE_IP)
+if __name__ == '__main__':
+    app.run(debug=False, host=IMAGE_SERVICE_IP, port=IMAGE_SERVICE_PORT)

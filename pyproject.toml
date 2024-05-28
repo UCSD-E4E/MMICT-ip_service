@@ -13,7 +13,8 @@ authors = [
 
 # poetry entrypoint for running our Flask server
 [tool.poetry.scripts]
-image-processing-server = "mm_image_processing.server:main"
+# Using guincorn to server our application
+# image-processing-server = "mm_image_processing.server:main"
 
 [tool.poetry.dependencies]
 python = "^3.9"
@@ -31,6 +32,8 @@ websockets = "^11.0"
 geopandas = "^0.14"
 opencv-python = "^4.7"
 python-dotenv = "^1.0"
+gunicorn = "^22.0.0"
+gevent = "^24.2.1"
 
 [tool.poetry.dev-dependencies]
 
