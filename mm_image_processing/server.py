@@ -51,11 +51,9 @@ def home():
 # for testing websocket connections
 @sock.route('/echo')
 def ws_echo(ws):
-    app.logger.debug("received echo request!!!")
     while (True):
         data = ws.receive()
-        reverse = data[::-1]
-        ws.send(reverse)
+        ws.send(data)
 
 @sock.route('/ws-process')
 def ws_process(ws):
@@ -85,35 +83,40 @@ def ws_process(ws):
 
     # now that it is known to be "safe" load json object, accept the request
     request_json = json.loads(data, strict=False)
-    classifier_id = request_json['classifier_id']
-    img_ref = request_json['image_ref']
+    rgb_img_ref = request_json['rgb_image_ref']
+    nir_img_ref = request_json['nir_image_ref']
+    date_of_capture = request_json['date_of_capture']
+    location = request_json['location']
+    r_channel = request_json['r_channel']
+    g_channel = request_json['g_channel']
+    b_channel = request_json['b_channel']
+    nir_channel = request_json['nir_channel']
 
     # write back progress update on the websocket
-    progress = {"status": "ACCEPTED", "percent": 10}
+    progress = {"status": "Accepted classification request", "percent": 5}
     msg = json.dumps(progress)
     ws.send(msg)
 
     # write back progress again
-    progress["status"] = "DOWNLOADING"
-    progress["percent"] = 20
+    progress = {"status": "Downloading specified imagery", "percent": 10}
     msg = json.dumps(progress)
     ws.send(msg)
 
-    # try to download the image at img_ref from the s3 bucket
+    # try to download the image at rgb_img_ref and nir_img_ref from the s3 bucket
 
     # Note: For the dummy-upload branch, the file being downloaded is NOT the one being returned back, this
     # is simply a sanity check to ensure the download is working properly. It may be valuable to keep this 
     # to ensure any production-ready code is playing nicely with S3 as expected.
     try:
-        imgUrl = getImg(img_ref, app)
+        rgbImgUrl = getImg(rgb_img_ref, app)
+        nirImgUrl = getImg(nir_img_ref, app)
     except Exception as e:
         app.logger.error(e)
         ws.close(1)
         return
     
-    # # write back progress again
-    progress["status"] = "PROCESSING"
-    progress["percent"] = 30
+    # write back progress again
+    progress = {"status": "Preparing to preprocess imagery", "percent": 15}
     msg = json.dumps(progress)
     ws.send(msg)
 
@@ -151,6 +154,7 @@ def ws_process(ws):
     # # build geojson from classified data, then convert to a serializable json format
     # geojson_raw = build_geojson(img_shape, bbox, classified_array)
     # geojson = geojson_raw.to_json()
+
     try:
         f = open('mm_image_processing/labels.json') # working directory is at /ip-service, as defined in the Dockerfile
     except Exception as e:
@@ -160,19 +164,17 @@ def ws_process(ws):
         return
     
     geojson = json.load(f)
-    progress["status"] = "COMPRESSING GEODATA"
-    progress["percent"] = 70
+    progress = {"status": "Compressing geodata", "percent": 70}
     msg = json.dumps(progress)
     ws.send(msg)
     compressed = zlib.compress(json.dumps(geojson).encode(), 3)
 
-    progress["status"] = "RECEIVING GEODATA"
-    progress["percent"] = 80
+    progress = {"status": "Receiving geodata", "percent": 80}
     progress["geojson_flag"] = "sending"    
     msg = json.dumps(progress)
     ws.send(msg)
 
-    geojson_chunks = chunk_geojson(geojson)
+    geojson_chunks = chunk_geojson(json.dumps(geojson)) # chunk_geojson(str(compressed))
     progress_increment = 20 / len(geojson_chunks)
     for i in range(len(geojson_chunks)):
         progress["geojson_chunk"] = geojson_chunks[i]
@@ -180,7 +182,7 @@ def ws_process(ws):
         msg = json.dumps(progress)
         ws.send(msg)
     progress["geojson_flag"] = "done"
-    progress["status"] = "DONE"
+    progress["status"] = "Completed successfully"
     progress["percent"] = 100
     msg = json.dumps(progress)
     
@@ -188,10 +190,10 @@ def ws_process(ws):
     ws.send(msg)
     ws.close()
 
-def chunk_geojson(geojson):
-    msg = json.dumps(geojson)
+def chunk_geojson(geojson_str):
+    msg = geojson_str
     chunks = []
-    chunk_length = 4096
+    chunk_length = 32768 #4096
     for i in range(math.ceil(len(msg) / chunk_length)):
         chunks.append(msg[(chunk_length * i) : (chunk_length * (i + 1))])
     return chunks
@@ -211,14 +213,29 @@ def validate_process_request_json(data):
     app.logger.debug("validating request: " + data)
     try:
         request_json = json.loads(data, strict=False)
-        if 'processor_id' not in request_json:
-            app.logger.warning("no processor_id")
+        if 'rgb_image_ref' not in request_json:
+            app.logger.warning("missing rgb_image_ref")
             return False
-        if 'classifier_id' not in request_json:
-            app.logger.warning("no classifier_id")
+        if 'nir_image_ref' not in request_json:
+            app.logger.warning("missing nir_image_ref")
             return False
-        if 'image_ref' not in request_json:
-            app.logger.warning("no image_ref")
+        if 'date_of_capture' not in request_json:
+            app.logger.warning("missing date_of_capture")
+            return False
+        if 'location' not in request_json:
+            app.logger.warning("missing location")
+            return False
+        if 'r_channel' not in request_json:
+            app.logger.warning("missing r_channel")
+            return False
+        if 'g_channel' not in request_json:
+            app.logger.warning("missing g_channel")
+            return False
+        if 'b_channel' not in request_json:
+            app.logger.warning("missing b_channel")
+            return False
+        if 'nir_channel' not in request_json:
+            app.logger.warning("missing nir_channel")
             return False
         app.logger.debug("Validated request successfully")
         return True
