@@ -26,7 +26,7 @@ COPY . /ip_service/
 # Install project dependencies
 RUN poetry config virtualenvs.create false && poetry install --no-interaction --no-ansi
 
-EXPOSE 8080
+EXPOSE 5002
 
 # poetry entrypoint to run the service, this executable is stored in our Docker container's file system
-ENTRYPOINT ["/usr/local/bin/image-processing-server"]
+CMD ["gunicorn", "-c", "gunicorn_config.py", "mm_image_processing.server:app"]
