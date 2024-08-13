@@ -31,6 +31,7 @@ def getImg(img_ref, app):
     secret_key = s3_section['aws_secret_access_key']
     bucket_name = s3_section['bucket_name']
 
+    
     s3_client = boto3.client(
         's3',
         aws_access_key_id=access_key,

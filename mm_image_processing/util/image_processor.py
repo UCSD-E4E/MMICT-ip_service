@@ -24,7 +24,7 @@ from rasterio.plot import show
 from rasterio.plot import reshape_as_image
 
 
-from mm_image_processing.util.models import ResNet18_UNet
+from mm_image_processing.util.models import ResNet18_UNet,SegmentModelWrapper
 from PIL import Image
 from tqdm import tqdm 
 
@@ -132,7 +132,6 @@ def reshape_as_raster(array):
         raise ValueError("Input array must have shape (height, width, 1)")
         
 
-
 def buildGeoJson(img_shape, bbox, classified_output, app_logger_warning=None):
     """
     Builds a GeoJSON using EPSG:32617 from the given inputs.
@@ -145,57 +144,68 @@ def buildGeoJson(img_shape, bbox, classified_output, app_logger_warning=None):
 
     Returns:
         dict: The GeoJSON representation of the classified output.
+        
+  
+    
     """
     
-  
-    total_elements = classified_output.size
- 
+    #output_img = reshape_as_raster(classified_output.reshape(img_shape[0], img_shape[1], 1)) 
     
-
-    height, width, _ = img_shape
-    expected_elements = height * width
-
-    
-    
-    output_img = reshape_as_raster(classified_output.reshape(img_shape[0], img_shape[1], 1)) 
-    
-    transform = rasterio.transform.from_bounds(*bbox, width= output_img.shape[1], height= output_img.shape[0])
+    transform = rasterio.transform.from_bounds(*bbox, width= classified_output.shape[1], height= classified_output.shape[0])
     
     labels = raster_to_gdf(classified_output, transform, crs = "EPSG:4326", app_logger_warning = app_logger_warning)
 
     # returning GeoJSON
     return labels
 
-
 def prediction(image):
 
 
-    patch_size = 128
- 
-    model = ResNet18_UNet()
-    model.load_state_dict(torch.load('mm_image_processing/util/imagenet_resnet18_unet.pth', map_location=torch.device('cpu')))
-    model.eval()
-    model = model.to('cpu')
+    model = ResNet18_UNet(input_image_size=256)
+    model.load_state_dict(torch.load('mm_image_processing/util/ResNet18_UNet_epoch_20.pth', map_location='cpu'))
+    wrapper = SegmentModelWrapper(model)
+    wrapper.eval()
 
-
+    # Initialize the segmented image with zeros
     segm_img = np.zeros(image.shape[:2])
-    weights_sum = np.zeros(image.shape[:2])
-    sigmoid = nn.functional.sigmoid
-    for i in tqdm(range(0, image.shape[0] - patch_size + 1, patch_size)):
-        for j in range(0, image.shape[1] - patch_size + 1, patch_size):
+    weights_sum = np.zeros(image.shape[:2])  # Initialize weights for normalization
+    patch_num = 1
+    
+    
+    patch_size = 256
+
+
+
+    # Iterate over the image in steps of patch_size
+    for i in tqdm(range(0, image.shape[0] - patch_size + 1, patch_size)):   
+        for j in range(0, image.shape[1] - patch_size + 1, patch_size): 
+            # Extract the patch, ensuring we handle the boundaries
             single_patch = image[i:i+patch_size, j:j+patch_size]
-            single_patch_norm = normalize(single_patch)
-            single_patch_input = np.expand_dims(single_patch_norm, 0)
+            single_patch_input = np.expand_dims(single_patch, 0) 
             single_patch_input = np.transpose(single_patch_input, (0, 3, 1, 2))
+
+            # Predict and apply Sigmoid
             with torch.no_grad():
                 single_patch_input_tensor = torch.from_numpy(single_patch_input).float()
-                output = model(single_patch_input_tensor.to('cpu'))
-                threshold = 10**(-10)
-                probabilities = sigmoid(output)
-                binary_mask = (probabilities > threshold).int()
-                binary_mask_np = binary_mask.squeeze().cpu().detach().numpy()
+                
+                output = wrapper(single_patch_input)
+    
+                
+                binary_mask_np = output.squeeze().cpu().detach().numpy()
+    
+                
+            # Resize the prediction to match the patch size
             single_patch_prediction_resized = cv2.resize(binary_mask_np, (patch_size, patch_size))
+            
+            # Add the prediction to the segmented image and update weights for normalization
             segm_img[i:i+patch_size, j:j+patch_size] += single_patch_prediction_resized
             weights_sum[i:i+patch_size, j:j+patch_size] += 1
+            
+            patch_num += 1
+            
+            
+
+    # Normalize the final segmented image to handle overlaps
     segm_img = np.divide(segm_img, weights_sum, where=weights_sum > 0)
+
     return segm_img
