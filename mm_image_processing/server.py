@@ -84,13 +84,11 @@ def ws_process(ws):
         # now that it is known to be "safe" load json object, accept the request
         request_json = json.loads(data, strict=False)
         rgb_img_ref = request_json['rgb_image_ref']
-        nir_img_ref = request_json['nir_image_ref']
         date_of_capture = request_json['date_of_capture']
         location = request_json['location']
         r_channel = request_json['r_channel']
         g_channel = request_json['g_channel']
         b_channel = request_json['b_channel']
-        nir_channel = request_json['nir_channel']
 
         # write back progress update on the websocket
         progress = {"status": "Accepted classification request", "percent": 5}
@@ -109,7 +107,6 @@ def ws_process(ws):
         # to ensure any production-ready code is playing nicely with S3 as expected.
         try:
             rgbImgUrl = getImg(rgb_img_ref, app)
-            nirImgUrl = getImg(nir_img_ref, app)
         except Exception as e:
             app.logger.error(e)
             ws.close(1)
@@ -220,9 +217,6 @@ def validate_process_request_json(data):
         if 'rgb_image_ref' not in request_json:
             app.logger.warning("missing rgb_image_ref")
             return False
-        if 'nir_image_ref' not in request_json:
-            app.logger.warning("missing nir_image_ref")
-            return False
         if 'date_of_capture' not in request_json:
             app.logger.warning("missing date_of_capture")
             return False
@@ -237,9 +231,6 @@ def validate_process_request_json(data):
             return False
         if 'b_channel' not in request_json:
             app.logger.warning("missing b_channel")
-            return False
-        if 'nir_channel' not in request_json:
-            app.logger.warning("missing nir_channel")
             return False
         app.logger.debug("Validated request successfully")
         return True
