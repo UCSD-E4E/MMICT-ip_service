@@ -6,12 +6,12 @@ import logging
 import requests
 import random
 import string
-import pickle  # only needed for testing without classification service
 import json
 import asyncio
 import websockets
 import zlib
 import os
+import torch
 
 from dotenv import load_dotenv
 from threading import Thread, Lock
@@ -20,9 +20,9 @@ from flask import Flask, request, make_response
 from flask_cors import CORS
 from flask_csp.csp import csp_header
 
-# Ultility functions from the util directory  
+# Utility functions from the util directory  
 from mm_image_processing.util import image_processor  
-from mm_image_processing.util.image_processor import processImgFromLocal  
+from mm_image_processing.util.image_processor import processImgFromLocal, prediction, buildGeoJson
 from mm_image_processing.util.s3_img_getter import deleteImg, getImg
 
 logging.basicConfig(level=logging.DEBUG)
@@ -113,6 +113,7 @@ def ws_process(ws):
             return
         
         # write back progress again
+        app.logger.debug('downloaded url: ' + rgbImgUrl)
         progress = {"status": "Preparing to preprocess imagery", "percent": 15}
         msg = json.dumps(progress)
         ws.send(msg)
@@ -130,37 +131,46 @@ def ws_process(ws):
         # msg = json.dumps(progress)
         # ws.send(msg)
 
-        # # call the classify() method to get classified data from classification_service
-        # # * asyncio set so this route does not need to be an async function *
-        # asyncio.set_event_loop(asyncio.new_event_loop())
-        # classified_array = asyncio.get_event_loop().run_until_complete(
-        #     classify(classifier_id, processed_array))  # NOTE use await instead of this since it is cleaner
+        img_shape, bbox, processed_array = processImgFromLocal(rgbImgUrl, app)
+
+        app.logger.debug("image processing complete")
+        app.logger.debug(img_shape)
+
+        progress["status"] = "CLASSIFYING"
+
+        classified_array = prediction(processed_array)
+
+        app.logger.debug("prediction complete")
 
         # # check if classify() method failed
-        # if classified_array is None:
-        #     ws.send('classification_service error')
-        #     ws.close(1)
-        #     return
-        
-
-        # # write back progress update
-        # progress["status"] = "BUILDING"
-        # msg = json.dumps(progress)
-        # ws.send(msg)
-
-        # # build geojson from classified data, then convert to a serializable json format
-        # geojson_raw = build_geojson(img_shape, bbox, classified_array)
-        # geojson = geojson_raw.to_json()
-
-        try:
-            f = open('mm_image_processing/labels.json') # working directory is at /ip-service, as defined in the Dockerfile
-        except Exception as e:
-            app.logger.error(e)
-            print(os.getcwd())
+        if classified_array is None:
+            ws.send('classification_service error')
             ws.close(1)
             return
-        
-        geojson = json.load(f)
+
+        # # write back progress update
+        progress["status"] = "BUILDING"
+        msg = json.dumps(progress)
+        ws.send(msg)
+
+        #geojson = json.load(f)
+        progress = {"status": "Converting to geojson", "percent": 50}
+        msg = json.dumps(progress)
+        ws.send(msg)
+       
+        # # build geojson from classified data, then convert to a serializable json format
+        geojson_raw = buildGeoJson(img_shape, bbox, classified_array)
+        app.logger.debug(type(geojson_raw))
+
+        geojson = geojson_raw.to_json()
+
+        app.logger.debug(type(geojson))
+
+        progress = {"status": "Converting to gejson complete", "percent": 50}
+        ws.send(msg)
+
+        app.logger.debug("Build Geo Json Complete")
+
         progress = {"status": "Compressing geodata", "percent": 70}
         msg = json.dumps(progress)
         ws.send(msg)
