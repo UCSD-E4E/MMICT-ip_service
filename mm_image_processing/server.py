@@ -32,9 +32,7 @@ app = Flask(__name__)
 sock = Sock(app)  # create a websocket
 CORS(app)  # allow cross origin requests
 
-# IP and port address of the classification service
-CLASSIFY_IP = "172.18.0.3" # "container-service"
-CLASSIFY_PORT = "5001" 
+# IP and port address of the IP service
 IMAGE_SERVICE_IP = os.getenv("HOST_IP")
 IMAGE_SERVICE_PORT = os.getenv("PORT")
 
