@@ -38,6 +38,8 @@ CLASSIFY_PORT = "5001"
 IMAGE_SERVICE_IP = os.getenv("HOST_IP")
 IMAGE_SERVICE_PORT = os.getenv("PORT")
 
+globalProgressPercent = 0
+
 # Configure Flask logging
 if not app.debug:
     gunicorn_logger = logging.getLogger('gunicorn.error')
@@ -75,6 +77,9 @@ def ws_process(ws):
         data = ws.receive()
         app.logger.debug("validating request: " + data)
 
+        if(data == 'ping'):
+            continue
+    
         # validate request matches expected json format
         if not validate_process_request_json(data):
             ws.send('invalid request, killing connection')
@@ -85,20 +90,15 @@ def ws_process(ws):
         request_json = json.loads(data, strict=False)
         rgb_img_ref = request_json['rgb_image_ref']
         date_of_capture = request_json['date_of_capture']
-        location = request_json['location']
         r_channel = request_json['r_channel']
         g_channel = request_json['g_channel']
         b_channel = request_json['b_channel']
 
         # write back progress update on the websocket
-        progress = {"status": "Accepted classification request", "percent": 5}
-        msg = json.dumps(progress)
-        ws.send(msg)
+        send_progress_update(ws, 5, 'Accepted request')
 
         # write back progress again
-        progress = {"status": "Downloading specified imagery", "percent": 10}
-        msg = json.dumps(progress)
-        ws.send(msg)
+        send_progress_update(ws, 5, 'Downloading imagery')
 
         # try to download the image at rgb_img_ref and nir_img_ref from the s3 bucket
 
@@ -114,29 +114,15 @@ def ws_process(ws):
         
         # write back progress again
         app.logger.debug('downloaded url: ' + rgbImgUrl)
-        progress = {"status": "Preparing to preprocess imagery", "percent": 15}
-        msg = json.dumps(progress)
-        ws.send(msg)
 
-        # Currently, all processing is skipped in the pipeline for the purposes of demoing the GEOJSon transfer between services
-        # as the processing has some issues that I'm currently resolving. The architecture between the services is complete, however.
-        # -------------------------------------------------------------
-        
-        # # process the image now that it is downloaded locally
-        # img_shape, bbox, processed_array = processImgFromLocal(imgUrl, app)
-
-        # # write back progress update
-        # progress["status"] = "CLASSIFYING"
-        # # progress["bbox"] = bbox # write bbox back for debugging purpose only
-        # msg = json.dumps(progress)
-        # ws.send(msg)
+        send_progress_update(ws, 10, 'Preprocessing')
 
         img_shape, bbox, processed_array = processImgFromLocal(rgbImgUrl, app)
 
         app.logger.debug("image processing complete")
         app.logger.debug(img_shape)
 
-        progress["status"] = "CLASSIFYING"
+        send_progress_update(ws, 20, 'Identifying mangroves')
 
         classified_array = prediction(processed_array)
 
@@ -148,38 +134,25 @@ def ws_process(ws):
             ws.close(1)
             return
 
-        # # write back progress update
-        progress["status"] = "BUILDING"
-        msg = json.dumps(progress)
-        ws.send(msg)
-
-        #geojson = json.load(f)
-        progress = {"status": "Converting to geojson", "percent": 50}
-        msg = json.dumps(progress)
-        ws.send(msg)
+        send_progress_update(ws, 30, 'Converting to GeoJson')
        
         # # build geojson from classified data, then convert to a serializable json format
         geojson_raw = buildGeoJson(img_shape, bbox, classified_array)
         app.logger.debug(type(geojson_raw))
 
         geojson = geojson_raw.to_json()
-
+        geojson = json.loads(geojson)
+        
         app.logger.debug(type(geojson))
-
-        progress = {"status": "Converting to gejson complete", "percent": 50}
-        ws.send(msg)
 
         app.logger.debug("Build Geo Json Complete")
 
-        progress = {"status": "Compressing geodata", "percent": 70}
-        msg = json.dumps(progress)
-        ws.send(msg)
-        compressed = zlib.compress(json.dumps(geojson).encode(), 4)
+        # progress = {"status": "Compressing geodata", "percent": 70}
+        # msg = json.dumps(progress)
+        # ws.send(msg)
+        # compressed = zlib.compress(json.dumps(geojson).encode(), 4)
 
-        progress = {"status": "Receiving geodata", "percent": 80}
-        progress["geojson_flag"] = "sending"    
-        msg = json.dumps(progress)
-        ws.send(msg)
+        send_progress_update(ws, 10, 'Sending Geodata', geojson_flag='sending')
 
         # progress["geojson_compressed"] = compressed
         # msg = json.dumps(progress)
@@ -188,18 +161,20 @@ def ws_process(ws):
         geojson_chunks = chunk_geojson(json.dumps(geojson)) # chunk_geojson(str(compressed))
         progress_increment = 20 / len(geojson_chunks)
         for i in range(len(geojson_chunks)):
-            progress["geojson_chunk"] = geojson_chunks[i]
-            progress["percent"] = round(80 + (i * progress_increment), 2)
-            msg = json.dumps(progress)
-            ws.send(msg)
-        progress["geojson_flag"] = "done"
-        progress["status"] = "Completed successfully"
-        progress["percent"] = 100
-        msg = json.dumps(progress)
+            send_progress_update(ws, progress_increment, 'Sending Geodata', geojson_flag='sending', geojson_chunk=geojson_chunks[i])
         
-        # final writeback on websocket, then close connection
-        ws.send(msg)
+        send_progress_update(ws, 0, 'Completed successfully', geojson_flag='done')
         # ws.close()
+
+def send_progress_update(ws, increment, status, geojson_flag='', geojson_chunk=''):
+    globalProgressPercent += increment
+    progress = {'percent': round(globalProgressPercent, 2), 'status': status}
+    if(geojson_flag != ''):
+        progress['geojson_flag'] = geojson_flag
+    if(geojson_chunk != ''):
+        progress['geojson_chunk'] = geojson_chunk
+    msg = json.dumps(progress)
+    ws.send(msg)
 
 def chunk_geojson(geojson_str):
     msg = geojson_str

@@ -150,10 +150,8 @@ def buildGeoJson(img_shape, bbox, classified_output, app_logger_warning=None):
     return labels
 
 def prediction(image):
-
-
     model = ResNet18_UNet(input_image_size=256)
-    model.load_state_dict(torch.load('mm_image_processing/util/ResNet18_UNet_epoch_20.pth', map_location='cpu'))
+    model.load_state_dict(torch.load('mm_image_processing/util/ResNet18_UNet_epoch_20.pth', map_location='cpu', weights_only=True))
     wrapper = SegmentModelWrapper(model)
     wrapper.eval()
 
