@@ -9,7 +9,8 @@ RUN apt-get update \
        gdal-bin \
        libgdal-dev \
        libgl1-mesa-glx \
-       libglib2.0-0 
+       libglib2.0-0 \
+
 
 # Environment variables for GDAL
 ENV CPLUS_INCLUDE_PATH=/usr/include/gdal \
@@ -23,8 +24,8 @@ WORKDIR /ip_service
 # Copy all application files, make sure the poetry toml and .lock file are in the same directory
 COPY . /ip_service/
 
-# Install project dependencies
-RUN poetry config virtualenvs.create false && poetry install --no-interaction --no-ansi
+# Install project dependencies without virtual env, then clear the poetry cache
+RUN poetry config virtualenvs.create false && poetry install --no-interaction --no-ansi && poetry cache clear --all pypi
 
 EXPOSE 5002
 

@@ -1,5 +1,4 @@
 # Cofig for running our app using Gunicorn
-
 from dotenv import load_dotenv
 import os
 
