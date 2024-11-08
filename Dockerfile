@@ -1,5 +1,5 @@
-# FOR ARM64, we are using Python 3.9.18 on Debian 12
-FROM --platform=linux/amd64 python:3.9-slim-bookworm
+# FOR x86_64 Pytorch 2.4.1 CUDA 12.1 w/ Ubuntu 20.04
+FROM --platform=linux/amd64 pytorch/pytorch:2.4.1-cuda12.1-cudnn9-runtime
 
 # Install system dependencies, included OpenGL support and Glib for Open CV
 RUN apt-get update \
@@ -10,14 +10,17 @@ RUN apt-get update \
        libgdal-dev \
        libgl1-mesa-glx \
        libglib2.0-0 \
-
+       && apt-get clean \
+       && rm -rf /var/lib/apt/lists/*
 
 # Environment variables for GDAL
 ENV CPLUS_INCLUDE_PATH=/usr/include/gdal \
     C_INCLUDE_PATH=/usr/include/gdal
 
-# Install Poetry
-RUN python3.9 -m pip install poetry
+RUN python3 --version || python --version
+
+# Install Poetry & clear the pip cache
+RUN python3 -m pip install poetry && rm -rf /root/.cache/pip
 
 WORKDIR /ip_service
 

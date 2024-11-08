@@ -167,6 +167,7 @@ def ws_process(ws):
         # ws.close()
 
 def send_progress_update(ws, increment, status, geojson_flag='', geojson_chunk=''):
+    global globalProgressPercent 
     globalProgressPercent += increment
     progress = {'percent': round(globalProgressPercent, 2), 'status': status}
     if(geojson_flag != ''):
