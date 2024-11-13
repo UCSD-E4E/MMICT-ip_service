@@ -59,6 +59,7 @@ def ws_echo(ws):
 
 @sock.route('/ws-process')
 def ws_process(ws):
+    global globalProgressPercent
     """
     Route for classifying an image over a WebSocket connection.
 
@@ -86,6 +87,7 @@ def ws_process(ws):
             ws.close(1)
             return
 
+        globalProgressPercent = 0
         # now that it is known to be "safe" load json object, accept the request
         request_json = json.loads(data, strict=False)
         rgb_img_ref = request_json['rgb_image_ref']
@@ -98,7 +100,7 @@ def ws_process(ws):
         send_progress_update(ws, 5, 'Accepted request')
 
         # write back progress again
-        send_progress_update(ws, 5, 'Downloading imagery')
+        send_progress_update(ws, 5, 'Downloading')
 
         # try to download the image at rgb_img_ref and nir_img_ref from the s3 bucket
 
@@ -115,7 +117,7 @@ def ws_process(ws):
         # write back progress again
         app.logger.debug('downloaded url: ' + rgbImgUrl)
 
-        send_progress_update(ws, 10, 'Preprocessing')
+        send_progress_update(ws, 10, 'Preprocessing imagery')
 
         img_shape, bbox, processed_array = processImgFromLocal(rgbImgUrl, app)
 
