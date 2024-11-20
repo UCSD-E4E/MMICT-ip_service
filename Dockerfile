@@ -47,7 +47,7 @@ RUN apt-get update \
        gdal-bin \
        libgdal-dev \
        libgl1-mesa-glx \
-       libglib2.0-0 \
+       libglib2.0-0 
 
 
 # Environment variables for GDAL
