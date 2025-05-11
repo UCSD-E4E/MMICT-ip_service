@@ -1,5 +1,6 @@
 # FOR x86_64 Pytorch 2.4.1 CUDA 12.1 w/ Ubuntu 20.04
-FROM --platform=linux/amd64 pytorch/pytorch:2.4.1-cuda12.1-cudnn9-runtime
+FROM --platform=linux/arm64/v8 pytorch/pytorch:2.4.1-cuda12.1-cudnn9-runtime
+# FROM --platform=linux/amd64 pytorch/pytorch:2.4.1-cuda12.1-cudnn9-runtime
 
 # Install system dependencies, included OpenGL support and Glib for Open CV
 RUN apt-get update \
@@ -33,7 +34,9 @@ RUN poetry config virtualenvs.create false && poetry install --no-interaction --
 EXPOSE 5002
 
 # poetry entrypoint to run the service, this executable is stored in our Docker container's file system
-CMD ["gunicorn", "-c", "gunicorn_config.py", "mm_image_processing.server:app"]
+# CMD ["gunicorn", "-c", "gunicorn_config.py", "mm_image_processing.server:app"]
+# for deployment, possibly with tls cert files
+CMD ["gunicorn", "-c", "gunicorn_config.py", "--certfile=certs/server-cert.pem", "--keyfile=certs/server-key-unencrypted.pem", "mm_image_processing.server:app"]
 
 
 
